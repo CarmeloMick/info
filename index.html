@@ -30,7 +30,7 @@
         .date { font-size: 1.4rem; font-weight: bold; color: #ffcccc; letter-spacing: 2px; }
         .time { font-size: 3.2rem; font-weight: bold; font-family: monospace; margin: 2px 0; }
         .custom-text { font-size: 1.2rem; font-weight: bold; color: #ffcc00; letter-spacing: 1px; }
-        .status-msg { font-size: 0.85rem; color: #ffcccc; margin-top: 2px; font-weight: normal; }
+        .status-msg { font-size: 0.9rem; color: #ffcccc; margin-top: 3px; font-weight: normal; }
 
         /* 中部巴士區 */
         .section-bus {
@@ -115,7 +115,7 @@
         <div class="date" id="date-str">----/--/-- ---</div>
         <div class="time" id="time-str">00:00 --</div>
         <div class="custom-text">薯屋交通</div>
-        <div class="status-msg" id="bus-status-message">初始化系統中...</div>
+        <div class="status-msg" id="bus-status-message">準備就緒</div>
     </div>
 
     <div class="section-bus">
@@ -163,65 +163,37 @@
     </div>
 
     <script>
-        // 針對舊款 iPad (iOS 12-15) 設計的相容性超時 fetch 函數
-        async function fetchWithTimeout(url, options = {}, timeout = 8000) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
+        // 雙代理安全輪替連線引擎 (專門用來處理幾十KB以內嘅小檔案，極速且穩固)
+        async function fetchJsonWithProxy(targetUrl) {
             try {
-                const response = await fetch(url, { ...options, signal: controller.signal });
-                clearTimeout(id);
-                return response;
-            } catch (error) {
-                clearTimeout(id);
-                throw error;
+                const p1 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                const res = await fetch(p1);
+                if (res.ok) return await res.json();
+            } catch(e) {
+                console.warn("主代理慢，切換至備用代理...");
             }
-        }
-
-        // 多重公用 CORS 代理輪替機制，確保直連被封鎖時可自動切換
-        const PROXIES = [
-            {
-                name: "CorsProxy.io",
-                getUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                isDirect: true
-            },
-            {
-                name: "AllOrigins",
-                getUrl: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-                isDirect: false
-            },
-            {
-                name: "ThingProxy",
-                getUrl: (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
-                isDirect: true
-            }
-        ];
-
-        async function fetchBusData(targetUrl) {
-            let lastError = null;
-            for (let proxy of PROXIES) {
-                try {
-                    const proxyUrl = proxy.getUrl(targetUrl);
-                    const res = await fetchWithTimeout(proxyUrl, {}, 7000); // 每個代理限時 7 秒
-                    if (res.ok) {
-                        const resData = await res.json();
-                        if (proxy.isDirect) {
-                            if (resData && resData.data) return resData;
-                        } else {
-                            if (resData && resData.contents) {
-                                const parsed = JSON.parse(resData.contents);
-                                if (parsed && parsed.data) return parsed;
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.warn(`${proxy.name} 失敗，嘗試下一個...`, err);
-                    lastError = err;
+            
+            try {
+                const p2 = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                const res = await fetch(p2);
+                if (res.ok) {
+                    const obj = await res.json();
+                    return JSON.parse(obj.contents);
                 }
+            } catch(e) {
+                throw new Error("所有 CORS 代理連線失敗");
             }
-            throw lastError || new Error("所有代理連線失敗");
         }
 
-        // 路線配置：改用 中文站名 + 目的地關鍵字 進行動態無痛配對
+        // 本地 LocalStorage 快取讀寫封裝
+        function getCachedStopName(stopId) {
+            return localStorage.getItem('shatin_bus_stop_' + stopId);
+        }
+        function setCachedStopName(stopId, name) {
+            localStorage.setItem('shatin_bus_stop_' + stopId, name);
+        }
+
+        // 路線關鍵字規則定義
         const busConfig = [
             { route: "89X", stopName: "富豪花園", destKeyword: "沙田", id: "bus-89X" },
             { route: "86K", stopName: "沙田第一城", destKeyword: "沙田", id: "bus-86K" },
@@ -232,28 +204,90 @@
             { route: "269D", stopName: "沙田市中心", destKeyword: "天富", id: "bus-269D" }
         ];
 
-        let stopMap = {};
-        let isStopMapLoaded = false;
+        let isRefreshing = false;
 
-        // 初始化：動態下載全港九巴站點 Hash 字典表 (約 1MB，只需下載一次)
-        async function initStopMap() {
-            try {
-                document.getElementById('bus-status-message').textContent = "⌛ 正在同步全港巴士站表...";
-                const stopListUrl = "https://data.etabus.gov.hk/v1/transport/kmb/stop";
-                const json = await fetchBusData(stopListUrl);
-                
-                if (json && json.data) {
-                    json.data.forEach(item => {
-                        stopMap[item.stop] = item.name_tc;
-                    });
-                    isStopMapLoaded = true;
-                    document.getElementById('bus-status-message').textContent = "✅ 站表同步成功，開始獲取班次";
-                    fetchAllBusETA();
+        async function refreshDashboard() {
+            if (isRefreshing) return;
+            isRefreshing = true;
+            
+            document.getElementById('bus-status-message').textContent = "🔄 正在讀取實時班次...";
+            
+            let allRouteData = {};
+            let missingStopIds = new Set();
+            
+            // 步驟 1: 下載 7 條路線嘅即時 ETA 清單 (小檔案，每條約 30KB)
+            for (let config of busConfig) {
+                try {
+                    const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
+                    const json = await fetchJsonWithProxy(url);
+                    
+                    if (json && json.data) {
+                        allRouteData[config.route] = json.data;
+                        // 搜集有邊個未認識嘅 16位元加密車站編號
+                        json.data.forEach(item => {
+                            if (item.stop && !getCachedStopName(item.stop)) {
+                                missingStopIds.add(item.stop);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    document.getElementById(config.id).textContent = "網絡延遲";
                 }
-            } catch (error) {
-                document.getElementById('bus-status-message').textContent = "⚠️ 站表載入失敗，5秒後重試...";
-                setTimeout(initStopMap, 5000);
             }
+            
+            // 步驟 2: 如果發現本機有未記低嘅站名，啟動「背景學習機制」(每站只查 1KB)
+            if (missingStopIds.size > 0) {
+                let arrayIds = Array.from(missingStopIds);
+                document.getElementById('bus-status-message').textContent = `⏳ 首次載入：正在建立站名數據庫 (剩餘 ${arrayIds.length} 個)...`;
+                
+                for (let i = 0; i < arrayIds.length; i++) {
+                    const stopId = arrayIds[i];
+                    try {
+                        document.getElementById('bus-status-message').textContent = `⏳ 智能學習站名中 (${i+1}/${arrayIds.length})...`;
+                        const url = `https://data.etabus.gov.hk/v1/transport/kmb/stop/${stopId}`;
+                        const json = await fetchJsonWithProxy(url);
+                        if (json && json.data && json.data.name_tc) {
+                            setCachedStopName(stopId, json.data.name_tc);
+                        }
+                        // 每次查詢休息 150毫秒，保持連線穩定
+                        await new Promise(r => setTimeout(r, 150));
+                    } catch (e) {
+                        console.warn("略過單個未成功站點：" + stopId);
+                    }
+                }
+            }
+            
+            document.getElementById('bus-status-message').textContent = "✅ 數據更新成功";
+            
+            // 步驟 3: 對照本機快取站名，精準比對並渲染到螢幕上
+            busConfig.forEach(config => {
+                const data = allRouteData[config.route];
+                if (!data) return;
+                
+                const matched = data.filter(item => {
+                    const actualStopName = getCachedStopName(item.stop);
+                    const matchStop = actualStopName && actualStopName.includes(config.stopName);
+                    const matchDest = item.dest_tc && item.dest_tc.includes(config.destKeyword);
+                    return matchStop && matchDest && item.eta;
+                });
+                
+                if (matched.length > 0) {
+                    matched.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+                    const nextBus1 = calculateMinutes(matched[0].eta);
+                    const nextBus2 = matched[1] ? calculateMinutes(matched[1].eta) : '--';
+                    document.getElementById(config.id).textContent = nextBus2 !== '--' ? `${nextBus1} / ${nextBus2}` : `${nextBus1}`;
+                } else {
+                    document.getElementById(config.id).textContent = "未有班次";
+                }
+            });
+            
+            isRefreshing = false;
+        }
+
+        function calculateMinutes(etaTimeStr) {
+            if (!etaTimeStr) return '--';
+            const diffMins = Math.ceil((new Date(etaTimeStr) - new Date()) / 1000 / 60);
+            return diffMins <= 0 ? "即將到站" : `${diffMins} 鐘`;
         }
 
         function updateClock() {
@@ -277,22 +311,19 @@
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
-                
                 let shatinTemp = data.temperature.data.find(item => item.place === '沙田');
                 if(shatinTemp) document.getElementById('weather-temp').textContent = `${shatinTemp.value}°C`;
-                
                 if(data.humidity) document.getElementById('weather-humidity').textContent = `濕度: ${data.humidity.data[0].value}%`;
                 if(data.uvindex && data.uvindex.data.length > 0) {
                     document.getElementById('weather-uv').textContent = `UV 指數: ${data.uvindex.data[0].value}`;
                 } else {
-                    document.getElementById('weather-uv').textContent = `UV 指UM: 0`;
+                    document.getElementById('weather-uv').textContent = `UV 指數: 0`;
                 }
                 
                 const warnRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
                 const warnData = await warnRes.json();
                 const warnBox = document.getElementById('weather-warning');
                 warnBox.innerHTML = '';
-                
                 if (Object.keys(warnData).length > 0) {
                     for (let key in warnData) {
                         warnBox.innerHTML += `<div class="warning-box">${warnData[key].name}</div> `;
@@ -306,52 +337,11 @@
             }
         }
 
-        async function fetchAllBusETA() {
-            if (!isStopMapLoaded) return;
-            
-            busConfig.forEach(async (config) => {
-                try {
-                    const targetUrl = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
-                    const json = await fetchBusData(targetUrl);
-                    
-                    // 利用站表字典，將 16 位 Hash 還原成中文站名，再結合目的地篩選
-                    const etas = json.data.filter(item => {
-                        const actualStopName = stopMap[item.stop];
-                        const matchStop = actualStopName && actualStopName.includes(config.stopName);
-                        const matchDest = item.dest_tc && item.dest_tc.includes(config.destKeyword);
-                        return matchStop && matchDest && item.eta;
-                    });
-                    
-                    if(etas.length > 0) {
-                        etas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
-                        const nextBus1 = calculateMinutes(etas[0].eta);
-                        const nextBus2 = etas[1] ? calculateMinutes(etas[1].eta) : '--';
-                        document.getElementById(config.id).textContent = nextBus2 !== '--' ? `${nextBus1} / ${nextBus2}` : `${nextBus1}`;
-                    } else {
-                        document.getElementById(config.id).textContent = "未有班次";
-                    }
-                } catch (error) {
-                    document.getElementById(config.id).textContent = "連線超時";
-                    console.error(error);
-                }
-            });
-        }
-
-        function calculateMinutes(etaTimeStr) {
-            if (!etaTimeStr) return '--';
-            const diffMins = Math.ceil((new Date(etaTimeStr) - new Date()) / 1000 / 60);
-            return diffMins <= 0 ? "即將到站" : `${diffMins} 鐘`;
-        }
-
         function triggerManualRefresh() {
             const btn = document.querySelector('.refresh-btn');
             btn.textContent = "⏳ 更新中...";
             fetchWeather();
-            if(isStopMapLoaded) {
-                fetchAllBusETA();
-            } else {
-                initStopMap();
-            }
+            refreshDashboard();
             setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1200);
         }
 
@@ -363,11 +353,11 @@
         // 啟動程序
         updateClock();
         fetchWeather();
-        initStopMap(); // 先載入站表字典，成功後會自動觸發第一次 ETA 獲取
+        refreshDashboard();
 
         setInterval(updateClock, 1000);
-        setInterval(fetchAllBusETA, 30000); 
-        setInterval(fetchWeather, 300000);
+        setInterval(refreshDashboard, 30000); // 每 30 秒自動刷新巴士
+        setInterval(fetchWeather, 300000);   // 每 5 分鐘自動刷新天氣
         setInterval(pixelShift, 600000);
     </script>
 </body>

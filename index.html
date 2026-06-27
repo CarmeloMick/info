@@ -82,8 +82,7 @@
         .temp { font-size: 3rem; font-weight: bold; line-height: 1; }
         .weather-meta { font-size: 1rem; color: #b3d1ff; margin-top: 3px; }
         
-        /* 刷新按鈕樣式 */
-        .weather-right { display: flex; flex-direction: column; align-items: flex-end; }
+        .weather-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
         .warning-box {
             background-color: #ff3333;
             color: #fff;
@@ -131,11 +130,11 @@
             <div class="bus-eta" id="bus-299X">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心 (循環線)</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
+            <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
             <div class="bus-eta" id="bus-83K">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園 (循環線)</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
+            <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
             <div class="bus-eta" id="bus-284">連線中...</div>
         </div>
         <div class="bus-row">
@@ -162,8 +161,8 @@
     </div>
 
     <script>
-        // 使用公開 CORS 代理伺服器解決連線問題
-        const PROXY = "https://api.allorigins.win/raw?url=";
+        // 改用政府資料一線通開放 API 渠道，原生支持 CORS 跨域連線，唔使再驚被九巴 Block IP
+        const DATA_GOV_API = "https://data.etabus.gov.hk/v1/transport/kmb/route-eta/";
 
         const busConfig = [
             { route: "89X", stopPrefix: "ST11", id: "bus-89X", dir: "O" },
@@ -221,16 +220,15 @@
                     document.getElementById('weather-desc').textContent = "天氣大致良好";
                 }
             } catch (error) {
-                console.error(error);
+                document.getElementById('weather-desc').textContent = "天氣連線錯誤";
             }
         }
 
         async function fetchAllBusETA() {
             busConfig.forEach(async (config) => {
                 try {
-                    // 加入 PROXY 解決跨域問題
-                    const targetUrl = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
-                    const res = await fetch(PROXY + encodeURIComponent(targetUrl));
+                    // 直接 fetch，唔再用任何 PROXY
+                    const res = await fetch(`${DATA_GOV_API}${config.route}/1`);
                     const json = await res.json();
                     
                     const etas = json.data.filter(item => item.stop.startsWith(config.stopPrefix) && item.dir === config.dir && item.eta);
@@ -243,7 +241,7 @@
                         document.getElementById(config.id).textContent = "未有班次";
                     }
                 } catch (error) {
-                    document.getElementById(config.id).textContent = "失敗";
+                    document.getElementById(config.id).textContent = "網絡錯誤";
                 }
             });
         }
@@ -259,7 +257,7 @@
             btn.textContent = "⏳ 更新中...";
             fetchWeather();
             fetchAllBusETA();
-            setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1500);
+            setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1000);
         }
 
         function pixelShift() {

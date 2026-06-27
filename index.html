@@ -19,7 +19,7 @@
             padding: 10px;
         }
 
-        /* 頂部時間區 (紅底) */
+        /* 頂部時間區 */
         .section-time {
             background-color: #b30000;
             padding: 12px;
@@ -69,7 +69,7 @@
         .bus-stop { font-size: 0.85rem; color: #888; margin-top: 1px; }
         .bus-eta { font-size: 1.5rem; font-weight: bold; color: #00ffcc; font-family: monospace; text-align: right; margin-left: 10px; }
 
-        /* 底部天氣區 + 刷新功能 */
+        /* 底部天氣區 */
         .section-weather {
             background-color: #0044cc;
             padding: 12px;
@@ -161,8 +161,9 @@
     </div>
 
     <script>
-        // 改用政府資料一線通開放 API 渠道，原生支持 CORS 跨域連線，唔使再驚被九巴 Block IP
-        const DATA_GOV_API = "https://data.etabus.gov.hk/v1/transport/kmb/route-eta/";
+        // 改用穩定的 AllOrigins JSON 代理包裝，徹底解決前端直接 fetch 產生的 CORS 網絡錯誤
+        const PROXY_URL = "https://api.allorigins.win/get?url=";
+        const KMB_API_BASE = "https://data.etabus.gov.hk/v1/transport/kmb/route-eta/";
 
         const busConfig = [
             { route: "89X", stopPrefix: "ST11", id: "bus-89X", dir: "O" },
@@ -220,16 +221,20 @@
                     document.getElementById('weather-desc').textContent = "天氣大致良好";
                 }
             } catch (error) {
-                document.getElementById('weather-desc').textContent = "天氣連線錯誤";
+                document.getElementById('weather-desc').textContent = "天氣更新失敗";
             }
         }
 
         async function fetchAllBusETA() {
             busConfig.forEach(async (config) => {
                 try {
-                    // 直接 fetch，唔再用任何 PROXY
-                    const res = await fetch(`${DATA_GOV_API}${config.route}/1`);
-                    const json = await res.json();
+                    // 透過 Proxy 把目標網址包裝起來，避開跨域封鎖
+                    const target = `${KMB_API_BASE}${config.route}/1`;
+                    const response = await fetch(`${PROXY_URL}${encodeURIComponent(target)}`);
+                    const proxyData = await response.json();
+                    
+                    // AllOrigins 會把回傳結果塞進 .contents 字串入面，要解析 JSON
+                    const json = JSON.parse(proxyData.contents);
                     
                     const etas = json.data.filter(item => item.stop.startsWith(config.stopPrefix) && item.dir === config.dir && item.eta);
                     
@@ -241,7 +246,8 @@
                         document.getElementById(config.id).textContent = "未有班次";
                     }
                 } catch (error) {
-                    document.getElementById(config.id).textContent = "網絡錯誤";
+                    document.getElementById(config.id).textContent = "稍後再試";
+                    console.error(error);
                 }
             });
         }

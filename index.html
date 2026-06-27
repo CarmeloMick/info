@@ -31,7 +31,7 @@
         .time { font-size: 3.2rem; font-weight: bold; font-family: monospace; margin: 2px 0; }
         .custom-text { font-size: 1.2rem; font-weight: bold; color: #ffcc00; letter-spacing: 1px; }
 
-        /* 中部巴士區 (黑底帶線) - 調整為可容納更多路線 */
+        /* 中部巴士區 */
         .section-bus {
             flex: 1;
             background-color: #111;
@@ -64,15 +64,12 @@
             min-width: 70px;
             text-align: center;
         }
-        .bus-details {
-            display: flex;
-            flex-direction: column;
-        }
+        .bus-details { display: flex; flex-direction: column; }
         .bus-dest { font-size: 1.1rem; font-weight: bold; color: #fff; }
         .bus-stop { font-size: 0.85rem; color: #888; margin-top: 1px; }
         .bus-eta { font-size: 1.5rem; font-weight: bold; color: #00ffcc; font-family: monospace; text-align: right; margin-left: 10px; }
 
-        /* 底部天氣區 (藍底) */
+        /* 底部天氣區 + 刷新功能 */
         .section-weather {
             background-color: #0044cc;
             padding: 12px;
@@ -84,7 +81,9 @@
         .weather-left { display: flex; flex-direction: column; }
         .temp { font-size: 3rem; font-weight: bold; line-height: 1; }
         .weather-meta { font-size: 1rem; color: #b3d1ff; margin-top: 3px; }
-        .weather-right { text-align: right; }
+        
+        /* 刷新按鈕樣式 */
+        .weather-right { display: flex; flex-direction: column; align-items: flex-end; }
         .warning-box {
             background-color: #ff3333;
             color: #fff;
@@ -96,6 +95,18 @@
             display: inline-block;
         }
         .weather-text { font-size: 1.1rem; font-weight: bold; color: #fff; }
+        .refresh-btn {
+            margin-top: 5px;
+            background-color: rgba(255,255,255,0.2);
+            color: #fff;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .refresh-btn:active { background-color: rgba(255,255,255,0.4); }
     </style>
 </head>
 <body>
@@ -109,31 +120,31 @@
     <div class="section-bus">
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">89X</div><div class="bus-details"><div class="bus-dest">往 沙田站</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
-            <div class="bus-eta" id="bus-89X">讀取中...</div>
+            <div class="bus-eta" id="bus-89X">連線中...</div>
         </div>
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">86K</div><div class="bus-details"><div class="bus-dest">往 沙田站</div><div class="bus-stop">沙田第一城 (ST507)</div></div></div>
-            <div class="bus-eta" id="bus-86K">讀取中...</div>
+            <div class="bus-eta" id="bus-86K">連線中...</div>
         </div>
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">299X</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
-            <div class="bus-eta" id="bus-299X">讀取中...</div>
+            <div class="bus-eta" id="bus-299X">連線中...</div>
         </div>
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心 (循環線)</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
-            <div class="bus-eta" id="bus-83K">讀取中...</div>
+            <div class="bus-eta" id="bus-83K">連線中...</div>
         </div>
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園 (循環線)</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
-            <div class="bus-eta" id="bus-284">讀取中...</div>
+            <div class="bus-eta" id="bus-284">連線中...</div>
         </div>
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">49X</div><div class="bus-details"><div class="bus-dest">往 青衣碼頭</div><div class="bus-stop">富豪花園 (ST512)</div></div></div>
-            <div class="bus-eta" id="bus-49X">讀取中...</div>
+            <div class="bus-eta" id="bus-49X">連線中...</div>
         </div>
         <div class="bus-row">
             <div class="bus-info"><div class="bus-no">269D</div><div class="bus-details"><div class="bus-dest">往 天富</div><div class="bus-stop">沙田市中心總站 (ST912)</div></div></div>
-            <div class="bus-eta" id="bus-269D">讀取中...</div>
+            <div class="bus-eta" id="bus-269D">連線中...</div>
         </div>
     </div>
 
@@ -146,29 +157,30 @@
         <div class="weather-right">
             <div id="weather-warning"></div>
             <div class="weather-text" id="weather-desc">正在連線...</div>
+            <button class="refresh-btn" onclick="triggerManualRefresh()">🔄 刷新數據</button>
         </div>
     </div>
 
     <script>
-        // 配置路線與對應的車站代號前綴
+        // 使用公開 CORS 代理伺服器解決連線問題
+        const PROXY = "https://api.allorigins.win/raw?url=";
+
         const busConfig = [
-            { route: "89X", stopPrefix: "ST11", id: "bus-89X", dir: "O" }, // 富豪花園 ST511 (API通常去前綴代號)
-            { route: "86K", stopPrefix: "ST07", id: "bus-86K", dir: "O" }, // 沙田第一城 ST507
-            { route: "299X", stopPrefix: "ST11", id: "bus-299X", dir: "O" }, // 富豪花園 ST511
-            { route: "83K", stopPrefix: "ST11", id: "bus-83K", dir: "O" }, // 富豪花園 ST511
-            { route: "284", stopPrefix: "ST11", id: "bus-284", dir: "O" }, // 富豪花園 ST511
-            { route: "49X", stopPrefix: "ST12", id: "bus-49X", dir: "O" }, // 富豪花園 ST512
-            { route: "269D", stopPrefix: "ST91", id: "bus-269D", dir: "O" }  // 沙田市中心總站 ST912
+            { route: "89X", stopPrefix: "ST11", id: "bus-89X", dir: "O" },
+            { route: "86K", stopPrefix: "ST07", id: "bus-86K", dir: "O" },
+            { route: "299X", stopPrefix: "ST11", id: "bus-299X", dir: "O" },
+            { route: "83K", stopPrefix: "ST11", id: "bus-83K", dir: "O" },
+            { route: "284", stopPrefix: "ST11", id: "bus-284", dir: "O" },
+            { route: "49X", stopPrefix: "ST12", id: "bus-49X", dir: "O" },
+            { route: "269D", stopPrefix: "ST91", id: "bus-269D", dir: "O" }
         ];
 
-        // 1. 更新時間同日期
         function updateClock() {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const date = String(now.getDate()).padStart(2, '0');
             const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-            const dayStr = days[now.getDay()];
             
             let hours = now.getHours();
             const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -176,27 +188,19 @@
             hours = hours ? hours : 12;
             const minutes = String(now.getMinutes()).padStart(2, '0');
             
-            document.getElementById('date-str').textContent = `${year}/${month}/${date} ${dayStr}`;
+            document.getElementById('date-str').textContent = `${year}/${month}/${date} ${days[now.getDay()]}`;
             document.getElementById('time-str').textContent = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
         }
 
-        // 2. 拿取香港天文台數據
         async function fetchWeather() {
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
                 
-                // 優先拿取沙田區溫度，如果冇就用總部溫度
                 let shatinTemp = data.temperature.data.find(item => item.place === '沙田');
-                if(shatinTemp) {
-                    document.getElementById('weather-temp').textContent = `${shatinTemp.value}°C`;
-                } else if(data.temperature && data.temperature.data.length > 0) {
-                    document.getElementById('weather-temp').textContent = `${data.temperature.data[0].value}°C`;
-                }
-
-                if(data.humidity && data.humidity.data.length > 0) {
-                    document.getElementById('weather-humidity').textContent = `濕度: ${data.humidity.data[0].value}%`;
-                }
+                if(shatinTemp) document.getElementById('weather-temp').textContent = `${shatinTemp.value}°C`;
+                
+                if(data.humidity) document.getElementById('weather-humidity').textContent = `濕度: ${data.humidity.data[0].value}%`;
                 if(data.uvindex && data.uvindex.data.length > 0) {
                     document.getElementById('weather-uv').textContent = `UV 指數: ${data.uvindex.data[0].value}`;
                 } else {
@@ -210,75 +214,68 @@
                 
                 if (Object.keys(warnData).length > 0) {
                     for (let key in warnData) {
-                        const warn = warnData[key];
-                        warnBox.innerHTML += `<div class="warning-box">${warn.name}</div> `;
+                        warnBox.innerHTML += `<div class="warning-box">${warnData[key].name}</div> `;
                     }
                     document.getElementById('weather-desc').textContent = "請注意警告";
                 } else {
                     document.getElementById('weather-desc').textContent = "天氣大致良好";
                 }
             } catch (error) {
-                console.error("天氣獲取失敗", error);
+                console.error(error);
             }
         }
 
-        // 3. 批次拿取所有巴士線的 ETA
         async function fetchAllBusETA() {
             busConfig.forEach(async (config) => {
                 try {
-                    // 透過路線直接獲取該線所有站點的 ETA
-                    const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`);
+                    // 加入 PROXY 解決跨域問題
+                    const targetUrl = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
+                    const res = await fetch(PROXY + encodeURIComponent(targetUrl));
                     const json = await res.json();
                     
-                    // 篩選出匹配指定車站代號前綴 (如 ST11) 以及方向的班次
                     const etas = json.data.filter(item => item.stop.startsWith(config.stopPrefix) && item.dir === config.dir && item.eta);
                     
                     if(etas.length > 0) {
                         const nextBus1 = calculateMinutes(etas[0].eta);
                         const nextBus2 = etas[1] ? calculateMinutes(etas[1].eta) : '--';
-                        
-                        // 格式化輸出：例如 "5 鐘 / 18 鐘"
-                        let displayStr = `${nextBus1}`;
-                        if (nextBus2 !== '--') {
-                            displayStr += ` / ${nextBus2}`;
-                        }
-                        document.getElementById(config.id).textContent = displayStr;
+                        document.getElementById(config.id).textContent = nextBus2 !== '--' ? `${nextBus1} / ${nextBus2}` : `${nextBus1}`;
                     } else {
                         document.getElementById(config.id).textContent = "未有班次";
                     }
                 } catch (error) {
-                    document.getElementById(config.id).textContent = "連線失敗";
+                    document.getElementById(config.id).textContent = "失敗";
                 }
             });
         }
 
-        // 計算剩餘分鐘數
         function calculateMinutes(etaTimeStr) {
             if (!etaTimeStr) return '--';
-            const eta = new Date(etaTimeStr);
-            const now = new Date();
-            const diffMs = eta - now;
-            const diffMins = Math.ceil(diffMs / 1000 / 60);
+            const diffMins = Math.ceil((new Date(etaTimeStr) - new Date()) / 1000 / 60);
             return diffMins <= 0 ? "即將到站" : `${diffMins} 鐘`;
         }
 
-        // 4. 防燒印微移
-        function pixelShift() {
-            const shifter = document.getElementById('pixel-shifter');
-            const randomX = Math.floor(Math.random() * 3) - 1;
-            const randomY = Math.floor(Math.random() * 3) - 1;
-            shifter.style.transform = `translate(${randomX}px, ${randomY}px)`;
+        function triggerManualRefresh() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.textContent = "⏳ 更新中...";
+            fetchWeather();
+            fetchAllBusETA();
+            setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1500);
         }
 
-        // --- 啟動與定時器 ---
+        function pixelShift() {
+            const shifter = document.getElementById('pixel-shifter');
+            shifter.style.transform = `translate(${Math.floor(Math.random() * 3) - 1}px, ${Math.floor(Math.random() * 3) - 1}px)`;
+        }
+
+        // 啟動
         updateClock();
         fetchWeather();
         fetchAllBusETA();
 
-        setInterval(updateClock, 1000);       // 每秒更新時間
-        setInterval(fetchAllBusETA, 30000);   // 每 30 秒更新全部巴士
-        setInterval(fetchWeather, 300000);   // 每 5 分鐘更新天氣
-        setInterval(pixelShift, 600000);     // 每 10 分鐘防燒印
+        setInterval(updateClock, 1000);
+        setInterval(fetchAllBusETA, 30000); 
+        setInterval(fetchWeather, 300000);
+        setInterval(pixelShift, 600000);
     </script>
 </body>
 </html>

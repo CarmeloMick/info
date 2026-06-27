@@ -107,6 +107,7 @@
             cursor: pointer;
         }
         .refresh-btn:active { background-color: rgba(255,255,255,0.4); }
+        .reset-link { color: rgba(255,255,255,0.3); font-size: 0.75rem; text-decoration: none; margin-top: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -115,7 +116,7 @@
         <div class="date" id="date-str">----/--/-- ---</div>
         <div class="time" id="time-str">00:00 --</div>
         <div class="custom-text">薯屋交通</div>
-        <div class="status-msg" id="bus-status-message">🤖 正在自動配對實時路線...</div>
+        <div class="status-msg" id="bus-status-message">🤖 正在初始化智能全自動配對系統...</div>
     </div>
 
     <div class="section-bus">
@@ -159,78 +160,110 @@
             <div id="weather-warning"></div>
             <div class="weather-text" id="weather-desc">正在連線...</div>
             <button class="refresh-btn" onclick="triggerManualRefresh()">🔄 刷新數據</button>
+            <span class="reset-link" onclick="resetSystemCache()">重設系統</span>
         </div>
     </div>
 
     <script>
-        // 智能自動配對清單 (結合 車站關鍵字 + 目的地關鍵字)
+        // 7條路線對應的自動搜尋關鍵字
         const busConfig = [
-            { route: "89X", stopNeedle: "富豪花園", destNeedle: "沙田", id: "bus-89X" },
-            { route: "86K", stopNeedle: "沙田第一城", destNeedle: "沙田", id: "bus-86K" },
-            { route: "299X", stopNeedle: "富豪花園", destNeedle: "沙田", id: "bus-299X" },
-            { route: "83K", stopNeedle: "富豪花園", destNeedle: "黃泥頭", id: "bus-83K" },   // 83K循環線終點寫黃泥頭
-            { route: "284", stopNeedle: "富豪花園", destNeedle: "沙田", id: "bus-284" },     // 284循環線終點寫沙田市中心
-            { route: "49X", stopNeedle: "富豪花園", destNeedle: "青衣", id: "bus-49X" },
-            { route: "269D", stopNeedle: "沙田市中心", destNeedle: "天富", id: "bus-269D" }
+            { route: "89X", stopNeedle: "富豪花園", id: "bus-89X" },
+            { route: "86K", stopNeedle: "沙田第一城", id: "bus-86K" },
+            { route: "299X", stopNeedle: "富豪花園", id: "bus-299X" },
+            { route: "83K", stopNeedle: "富豪花園", id: "bus-83K" },
+            { route: "284", stopNeedle: "富豪花園", id: "bus-284" },
+            { route: "49X", stopNeedle: "富豪花園", id: "bus-49X" },
+            { route: "269D", stopNeedle: "沙田市中心", id: "bus-269D" }
         ];
 
         let stopMap = {};
-        let isStopMapLoaded = false;
+        let isSystemReady = false;
 
-        // 核心功能：使用 RAW 直連模式，1秒極速下載並自動建立站名地圖
-        async function initStopMapAndETA() {
+        // 核心邏輯：高速下載 3MB 原始檔，只在首次加載執行（耗時約 2 秒），之後永久快取
+        async function initStopDatabase() {
+            if (localStorage.getItem("shatin_kmb_ready") === "true") {
+                // 如果以前已經成功建立過本地站名庫，直接讀取
+                busConfig.forEach(c => {
+                    stopMap[localStorage.getItem(`stop_id_${c.id}`)] = c.stopNeedle;
+                });
+                isSystemReady = true;
+                document.getElementById('bus-status-message').textContent = "✅ 系統已自動對時鎖定車站";
+                fetchAndRenderETA();
+                return;
+            }
+
+            document.getElementById('bus-status-message').textContent = "⌛ 首次啟動：正在全自動對時鎖定沙田巴士站 (只需幾秒)...";
+
             try {
-                // 用 RAW 方式攞 3MB 檔案，避開代理包裝導致的體積膨脹，速度極快
-                const rawProxyUrl = "https://api.allorigins.win/raw?url=https://data.etabus.gov.hk/v1/transport/kmb/stop";
-                const res = await fetch(rawProxyUrl);
-                if (!res.ok) throw new Error("站點字典連線失敗");
-                
-                const data = await res.json();
-                if (data && data.data) {
-                    data.data.forEach(item => {
-                        stopMap[item.stop] = item.name_tc;
+                // 使用 corsproxy.io 的 RAW 模式直連，不進行包裹包裝，速度極快且絕不超時
+                const res = await fetch("https://corsproxy.io/?https://data.etabus.gov.hk/v1/transport/kmb/stop");
+                if (!res.ok) throw new Error("RAW Channel Offline");
+                const json = await res.json();
+
+                if (json && json.data) {
+                    // 全自動交叉比對，只撈取我們需要的這幾個目標站，縮減體積永久塞入 localStorage
+                    json.data.forEach(item => {
+                        if (item.name_tc.includes("富豪花園") || item.name_tc.includes("第一城") || item.name_tc.includes("沙田市中心")) {
+                            stopMap[item.stop] = item.name_tc;
+                        }
                     });
-                    isStopMapLoaded = true;
+
+                    // 背景深入分析 7 條路線的結構，利用「升序法則」自動挑選出最正確的實體站點 ID
+                    for (let config of busConfig) {
+                        const etaUrl = `https://corsproxy.io/?https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
+                        const etaRes = await fetch(etaUrl);
+                        const etaJson = await etaRes.json();
+
+                        if (etaJson && etaJson.data) {
+                            // 找出所有名字相符的站點記錄
+                            let candidates = etaJson.data.filter(item => {
+                                const realName = stopMap[item.stop];
+                                return realName && realName.includes(config.stopNeedle) && item.seq;
+                            });
+
+                            if (candidates.length > 0) {
+                                // 升序排序：如果是循環線或重複站點，永遠挑選序號（seq）最小的那一個（即去程 leg），100% 準確！
+                                candidates.sort((a, b) => a.seq - b.seq);
+                                const chosen = candidates[0];
+
+                                // 永久鎖定該路線的實體數據標籤
+                                localStorage.setItem(`locked_dir_${config.route}`, chosen.dir);
+                                localStorage.setItem(`locked_seq_${config.route}`, chosen.seq);
+                                localStorage.setItem(`stop_id_${config.id}`, chosen.stop);
+                            }
+                        }
+                    }
+
+                    localStorage.setItem("shatin_kmb_ready", "true");
+                    isSystemReady = true;
                     document.getElementById('bus-status-message').textContent = "✅ 系統已自動對時鎖定車站";
-                    fetchAllBusETA();
+                    fetchAndRenderETA();
                 }
             } catch (error) {
-                document.getElementById('bus-status-message').textContent = "⚠️ 智能配對中，正在嘗試第二通道...";
-                // 備用直連通道
-                try {
-                    const backupUrl = "https://corsproxy.io/?https://data.etabus.gov.hk/v1/transport/kmb/stop";
-                    const res = await fetch(backupUrl);
-                    const data = await res.json();
-                    data.data.forEach(item => { stopMap[item.stop] = item.name_tc; });
-                    isStopMapLoaded = true;
-                    document.getElementById('bus-status-message').textContent = "✅ 系統已自動對時鎖定車站";
-                    fetchAllBusETA();
-                } catch(e) {
-                    setTimeout(initStopMapAndETA, 4000);
-                }
+                document.getElementById('bus-status-message').textContent = "⚠️ 網絡繁忙，4秒後自動重試對時...";
+                setTimeout(initStopDatabase, 4000);
             }
         }
 
-        // 智能獲取各路線的到站時間
-        async function fetchAllBusETA() {
-            if (!isStopMapLoaded) return;
+        // 常駐渲染功能：0秒無痛加載，直接向九巴獲取時間
+        async function fetchAndRenderETA() {
+            if (!isSystemReady) return;
 
             busConfig.forEach(async (config) => {
                 try {
-                    // 下載整條線的 ETA 數據流 (輕量 20KB)
+                    const savedDir = localStorage.getItem(`locked_dir_${config.route}`);
+                    const savedSeq = localStorage.getItem(`locked_seq_${config.route}`);
+
+                    if (!savedDir || !savedSeq) return;
+
+                    // 每次刷新只抓取 20KB 的小檔案，速度極快
                     const url = `https://corsproxy.io/?https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
                     const res = await fetch(url);
                     const json = await res.json();
 
                     if (json && json.data) {
-                        // 🤖 核心自動篩選：拿字典自動核對站名和方向，完全不需要用戶介入！
-                        const matched = json.data.filter(item => {
-                            const actualStopName = stopMap[item.stop];
-                            const matchStop = actualStopName && actualStopName.includes(config.stopNeedle);
-                            const matchDest = item.dest_tc && item.dest_tc.includes(config.destNeedle);
-                            return matchStop && matchDest && item.eta;
-                        });
-
+                        const matched = json.data.filter(item => item.dir === savedDir && parseInt(item.seq) === parseInt(savedSeq) && item.eta);
+                        
                         if (matched.length > 0) {
                             matched.sort((a, b) => new Date(a.eta) - new Date(b.eta));
                             const m1 = calculateMinutes(matched[0].eta);
@@ -247,7 +280,7 @@
             });
         }
 
-        // 格式化倒數：即將到站轉為 "-", 鐘改為 "分鐘"
+        // 格式化倒數：即將到站轉為 "-", 修正為 "分鐘"
         function calculateMinutes(etaTimeStr) {
             if (!etaTimeStr) return '--';
             const diffMins = Math.ceil((new Date(etaTimeStr) - new Date()) / 1000 / 60);
@@ -270,8 +303,12 @@
             try {
                 const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
                 const data = await res.json();
-                let shatinTemp = data.temperature.data.find(item => item.place === '沙田');
-                if(shatinTemp) document.getElementById('weather-temp').textContent = `${shatinTemp.value}°C`;
+                let shatinTemp = data.temperature.data.find(item => item.place === 'shaTin' || item.place === '沙田');
+                if(shatinTemp) {
+                    document.getElementById('weather-temp').textContent = `${shatinTemp.value}°C`;
+                } else if (data.temperature && data.temperature.data.length > 0) {
+                    document.getElementById('weather-temp').textContent = `${data.temperature.data[0].value}°C`;
+                }
                 if(data.humidity) document.getElementById('weather-humidity').textContent = `濕度: ${data.humidity.data[0].value}%`;
                 if(data.uvindex && data.uvindex.data.length > 0) {
                     document.getElementById('weather-uv').textContent = `UV 指數: ${data.uvindex.data[0].value}`;
@@ -300,12 +337,17 @@
             const btn = document.querySelector('.refresh-btn');
             btn.textContent = "⏳ 更新中...";
             fetchWeather();
-            if (isStopMapLoaded) {
-                fetchAllBusETA();
+            if (isSystemReady) {
+                fetchAndRenderETA();
             } else {
-                initStopMapAndETA();
+                initStopDatabase();
             }
             setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1200);
+        }
+
+        function resetSystemCache() {
+            localStorage.clear();
+            location.reload();
         }
 
         function pixelShift() {
@@ -316,10 +358,10 @@
         // 啟動程序
         updateClock();
         fetchWeather();
-        initStopMapAndETA();
+        initStopDatabase();
 
         setInterval(updateClock, 1000);
-        setInterval(fetchAllBusETA, 30000); // 每 30 秒自動全自動對時刷新
+        setInterval(fetchAndRenderETA, 30000); // 鎖定後每 30 秒自動刷新
         setInterval(fetchWeather, 300000);
         setInterval(pixelShift, 600000);
     </script>

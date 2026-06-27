@@ -19,7 +19,7 @@
             padding: 10px;
         }
 
-        /* 頂部時間區 */
+        /* 頂部時間區 (紅底) */
         .section-time {
             background-color: #b30000;
             padding: 12px;
@@ -30,6 +30,7 @@
         .date { font-size: 1.4rem; font-weight: bold; color: #ffcccc; letter-spacing: 2px; }
         .time { font-size: 3.2rem; font-weight: bold; font-family: monospace; margin: 2px 0; }
         .custom-text { font-size: 1.2rem; font-weight: bold; color: #ffcc00; letter-spacing: 1px; }
+        .status-msg { font-size: 0.85rem; color: #ffcccc; margin-top: 2px; font-weight: normal; }
 
         /* 中部巴士區 */
         .section-bus {
@@ -69,7 +70,7 @@
         .bus-stop { font-size: 0.85rem; color: #888; margin-top: 1px; }
         .bus-eta { font-size: 1.5rem; font-weight: bold; color: #00ffcc; font-family: monospace; text-align: right; margin-left: 10px; }
 
-        /* 底部天氣區 */
+        /* 底部天氣區 + 刷新功能 */
         .section-weather {
             background-color: #0044cc;
             padding: 12px;
@@ -114,35 +115,36 @@
         <div class="date" id="date-str">----/--/-- ---</div>
         <div class="time" id="time-str">00:00 --</div>
         <div class="custom-text">薯屋交通</div>
+        <div class="status-msg" id="bus-status-message">初始化系統中...</div>
     </div>
 
     <div class="section-bus">
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">89X</div><div class="bus-details"><div class="bus-dest">往 沙田站</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
+            <div class="bus-info"><div class="bus-no">89X</div><div class="bus-details"><div class="bus-dest">往 沙田站</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-89X">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">86K</div><div class="bus-details"><div class="bus-dest">往 沙田站</div><div class="bus-stop">沙田第一城 (ST507)</div></div></div>
+            <div class="bus-info"><div class="bus-no">86K</div><div class="bus-details"><div class="bus-dest">往 沙田站</div><div class="bus-stop">沙田第一城</div></div></div>
             <div class="bus-eta" id="bus-86K">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">299X</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
+            <div class="bus-info"><div class="bus-no">299X</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-299X">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
+            <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-83K">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園</div><div class="bus-stop">富豪花園 (ST511)</div></div></div>
+            <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-284">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">49X</div><div class="bus-details"><div class="bus-dest">往 青衣碼頭</div><div class="bus-stop">富豪花園 (ST512)</div></div></div>
+            <div class="bus-info"><div class="bus-no">49X</div><div class="bus-details"><div class="bus-dest">往 青衣碼頭</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-49X">連線中...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">269D</div><div class="bus-details"><div class="bus-dest">往 天富</div><div class="bus-stop">沙田市中心總站 (ST912)</div></div></div>
+            <div class="bus-info"><div class="bus-no">269D</div><div class="bus-details"><div class="bus-dest">往 天富</div><div class="bus-stop">沙田市中心總站</div></div></div>
             <div class="bus-eta" id="bus-269D">連線中...</div>
         </div>
     </div>
@@ -161,19 +163,98 @@
     </div>
 
     <script>
-        // 改用穩定的 AllOrigins JSON 代理包裝，徹底解決前端直接 fetch 產生的 CORS 網絡錯誤
-        const PROXY_URL = "https://api.allorigins.win/get?url=";
-        const KMB_API_BASE = "https://data.etabus.gov.hk/v1/transport/kmb/route-eta/";
+        // 針對舊款 iPad (iOS 12-15) 設計的相容性超時 fetch 函數
+        async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
 
-        const busConfig = [
-            { route: "89X", stopPrefix: "ST11", id: "bus-89X", dir: "O" },
-            { route: "86K", stopPrefix: "ST07", id: "bus-86K", dir: "O" },
-            { route: "299X", stopPrefix: "ST11", id: "bus-299X", dir: "O" },
-            { route: "83K", stopPrefix: "ST11", id: "bus-83K", dir: "O" },
-            { route: "284", stopPrefix: "ST11", id: "bus-284", dir: "O" },
-            { route: "49X", stopPrefix: "ST12", id: "bus-49X", dir: "O" },
-            { route: "269D", stopPrefix: "ST91", id: "bus-269D", dir: "O" }
+        // 多重公用 CORS 代理輪替機制，確保直連被封鎖時可自動切換
+        const PROXIES = [
+            {
+                name: "CorsProxy.io",
+                getUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                isDirect: true
+            },
+            {
+                name: "AllOrigins",
+                getUrl: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+                isDirect: false
+            },
+            {
+                name: "ThingProxy",
+                getUrl: (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+                isDirect: true
+            }
         ];
+
+        async function fetchBusData(targetUrl) {
+            let lastError = null;
+            for (let proxy of PROXIES) {
+                try {
+                    const proxyUrl = proxy.getUrl(targetUrl);
+                    const res = await fetchWithTimeout(proxyUrl, {}, 7000); // 每個代理限時 7 秒
+                    if (res.ok) {
+                        const resData = await res.json();
+                        if (proxy.isDirect) {
+                            if (resData && resData.data) return resData;
+                        } else {
+                            if (resData && resData.contents) {
+                                const parsed = JSON.parse(resData.contents);
+                                if (parsed && parsed.data) return parsed;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`${proxy.name} 失敗，嘗試下一個...`, err);
+                    lastError = err;
+                }
+            }
+            throw lastError || new Error("所有代理連線失敗");
+        }
+
+        // 路線配置：改用 中文站名 + 目的地關鍵字 進行動態無痛配對
+        const busConfig = [
+            { route: "89X", stopName: "富豪花園", destKeyword: "沙田", id: "bus-89X" },
+            { route: "86K", stopName: "沙田第一城", destKeyword: "沙田", id: "bus-86K" },
+            { route: "299X", stopName: "富豪花園", destKeyword: "沙田", id: "bus-299X" },
+            { route: "83K", stopName: "富豪花園", destKeyword: "沙田", id: "bus-83K" },
+            { route: "284", stopName: "富豪花園", destKeyword: "濱景", id: "bus-284" },
+            { route: "49X", stopName: "富豪花園", destKeyword: "青衣", id: "bus-49X" },
+            { route: "269D", stopName: "沙田市中心", destKeyword: "天富", id: "bus-269D" }
+        ];
+
+        let stopMap = {};
+        let isStopMapLoaded = false;
+
+        // 初始化：動態下載全港九巴站點 Hash 字典表 (約 1MB，只需下載一次)
+        async function initStopMap() {
+            try {
+                document.getElementById('bus-status-message').textContent = "⌛ 正在同步全港巴士站表...";
+                const stopListUrl = "https://data.etabus.gov.hk/v1/transport/kmb/stop";
+                const json = await fetchBusData(stopListUrl);
+                
+                if (json && json.data) {
+                    json.data.forEach(item => {
+                        stopMap[item.stop] = item.name_tc;
+                    });
+                    isStopMapLoaded = true;
+                    document.getElementById('bus-status-message').textContent = "✅ 站表同步成功，開始獲取班次";
+                    fetchAllBusETA();
+                }
+            } catch (error) {
+                document.getElementById('bus-status-message').textContent = "⚠️ 站表載入失敗，5秒後重試...";
+                setTimeout(initStopMap, 5000);
+            }
+        }
 
         function updateClock() {
             const now = new Date();
@@ -204,7 +285,7 @@
                 if(data.uvindex && data.uvindex.data.length > 0) {
                     document.getElementById('weather-uv').textContent = `UV 指數: ${data.uvindex.data[0].value}`;
                 } else {
-                    document.getElementById('weather-uv').textContent = `UV 指數: 0`;
+                    document.getElementById('weather-uv').textContent = `UV 指UM: 0`;
                 }
                 
                 const warnRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc');
@@ -226,19 +307,23 @@
         }
 
         async function fetchAllBusETA() {
+            if (!isStopMapLoaded) return;
+            
             busConfig.forEach(async (config) => {
                 try {
-                    // 透過 Proxy 把目標網址包裝起來，避開跨域封鎖
-                    const target = `${KMB_API_BASE}${config.route}/1`;
-                    const response = await fetch(`${PROXY_URL}${encodeURIComponent(target)}`);
-                    const proxyData = await response.json();
+                    const targetUrl = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${config.route}/1`;
+                    const json = await fetchBusData(targetUrl);
                     
-                    // AllOrigins 會把回傳結果塞進 .contents 字串入面，要解析 JSON
-                    const json = JSON.parse(proxyData.contents);
-                    
-                    const etas = json.data.filter(item => item.stop.startsWith(config.stopPrefix) && item.dir === config.dir && item.eta);
+                    // 利用站表字典，將 16 位 Hash 還原成中文站名，再結合目的地篩選
+                    const etas = json.data.filter(item => {
+                        const actualStopName = stopMap[item.stop];
+                        const matchStop = actualStopName && actualStopName.includes(config.stopName);
+                        const matchDest = item.dest_tc && item.dest_tc.includes(config.destKeyword);
+                        return matchStop && matchDest && item.eta;
+                    });
                     
                     if(etas.length > 0) {
+                        etas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
                         const nextBus1 = calculateMinutes(etas[0].eta);
                         const nextBus2 = etas[1] ? calculateMinutes(etas[1].eta) : '--';
                         document.getElementById(config.id).textContent = nextBus2 !== '--' ? `${nextBus1} / ${nextBus2}` : `${nextBus1}`;
@@ -246,7 +331,7 @@
                         document.getElementById(config.id).textContent = "未有班次";
                     }
                 } catch (error) {
-                    document.getElementById(config.id).textContent = "稍後再試";
+                    document.getElementById(config.id).textContent = "連線超時";
                     console.error(error);
                 }
             });
@@ -262,8 +347,12 @@
             const btn = document.querySelector('.refresh-btn');
             btn.textContent = "⏳ 更新中...";
             fetchWeather();
-            fetchAllBusETA();
-            setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1000);
+            if(isStopMapLoaded) {
+                fetchAllBusETA();
+            } else {
+                initStopMap();
+            }
+            setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1200);
         }
 
         function pixelShift() {
@@ -271,10 +360,10 @@
             shifter.style.transform = `translate(${Math.floor(Math.random() * 3) - 1}px, ${Math.floor(Math.random() * 3) - 1}px)`;
         }
 
-        // 啟動
+        // 啟動程序
         updateClock();
         fetchWeather();
-        fetchAllBusETA();
+        initStopMap(); // 先載入站表字典，成功後會自動觸發第一次 ETA 獲取
 
         setInterval(updateClock, 1000);
         setInterval(fetchAllBusETA, 30000); 

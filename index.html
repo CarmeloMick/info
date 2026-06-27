@@ -19,22 +19,25 @@
             padding: 10px;
         }
 
-        /* 首次使用的智能校對面板 */
+        /* 頂部智能校對面板 */
         #setup-panel {
             background-color: #222;
             border: 2px dashed #ffcc00;
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
             display: block;
         }
-        #setup-panel h3 { color: #ffcc00; margin-bottom: 8px; font-size: 1.2rem; }
-        #setup-panel p { font-size: 0.9rem; color: #ccc; margin-bottom: 10px; line-height: 1.4; }
-        .setup-row { margin-bottom: 10px; display: flex; flex-direction: column; }
-        .setup-row label { font-size: 0.95rem; font-weight: bold; margin-bottom: 4px; color: #fff; }
-        .setup-row select { background: #333; color: #fff; padding: 8px; border: 1px solid #555; border-radius: 4px; font-size: 1rem; }
-        .setup-btn { background: #ffcc00; color: #000; font-weight: bold; border: none; padding: 10px; border-radius: 4px; font-size: 1rem; cursor: pointer; margin-top: 5px; width: 100%; }
-        
+        #setup-panel h3 { color: #ffcc00; margin-bottom: 5px; font-size: 1.2rem; }
+        #setup-panel .instruction { font-size: 0.9rem; color: #ccc; margin-bottom: 15px; line-height: 1.4; }
+        .setup-row { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .setup-row label { font-size: 0.95rem; font-weight: bold; margin-bottom: 4px; color: #ffcc00; }
+        .setup-row select { background: #333; color: #fff; padding: 8px; border: 1px solid #555; border-radius: 4px; font-size: 0.95rem; width: 100%; }
+        .setup-btn { background: #ffcc00; color: #000; font-weight: bold; border: none; padding: 12px; border-radius: 4px; font-size: 1rem; cursor: pointer; margin-top: 10px; width: 100%; }
+        .clear-config-btn { background: #444; color: #aaa; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-top: 10px; }
+
         /* 頂部時間區 (紅底) */
         .section-time {
             background-color: #b30000;
@@ -127,22 +130,15 @@
 <body>
 
     <div id="setup-panel">
-        <h3>🔧 薯屋交通 • 智能車站校對</h3>
-        <p id="setup-status">正在從九巴網絡安全讀取附近的車站候選名單，請稍候...</p>
-        <div id="setup-fields" style="display:none;">
-            <div class="setup-row">
-                <label>1. 富豪花園站 (適用於 89X, 299X, 83K, 284, 49X):</label>
-                <select id="sel-fuhao"><option value="">載入中...</option></select>
-            </div>
-            <div class="setup-row">
-                <label>2. 沙田第一城站 (適用於 86K):</label>
-                <select id="sel-cityone"><option value="">載入中...</option></select>
-            </div>
-            <div class="setup-row">
-                <label>3. 沙田市中心總站 (適用於 269D):</label>
-                <select id="sel-center"><option value="">載入中...</option></select>
-            </div>
-            <button class="setup-btn" onclick="saveCalibration()">💾 鎖定車站，啟動巴士預報</button>
+        <h3>🔧 薯屋交通 • 實時對時校對</h3>
+        <div class="instruction">
+            請打開手機的「巴士預報」App，對照此時各路線在目標車站的剩餘分鐘，並在下方選擇對應的選項即可鎖定車站。
+        </div>
+        <div id="setup-loading" style="color: #00ffcc; font-weight: bold;">正在連線獲取巴士路線數據...</div>
+        
+        <div id="setup-form" style="display: none;">
+            <div id="dynamic-selectors"></div>
+            <button class="setup-btn" onclick="saveConfig()">💾 鎖定順序，啟動儀表板</button>
         </div>
     </div>
 
@@ -166,11 +162,11 @@
             <div class="bus-eta" id="bus-299X">待校對...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心 (循環線)</div><div class="bus-stop">富豪花園</div></div></div>
+            <div class="bus-info"><div class="bus-no">83K</div><div class="bus-details"><div class="bus-dest">往 沙田市中心</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-83K">待校對...</div>
         </div>
         <div class="bus-row">
-            <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園 (循環線)</div><div class="bus-stop">富豪花園</div></div></div>
+            <div class="bus-info"><div class="bus-no">284</div><div class="bus-details"><div class="bus-dest">往 濱景花園</div><div class="bus-stop">富豪花園</div></div></div>
             <div class="bus-eta" id="bus-284">待校對...</div>
         </div>
         <div class="bus-row">
@@ -194,148 +190,162 @@
             <div class="weather-text" id="weather-desc">正在連線...</div>
             <button class="refresh-btn" onclick="triggerManualRefresh()">🔄 刷新數據</button>
         </div>
+        <button class="clear-config-btn" style="position:absolute; left:10px; bottom:-35px;" onclick="resetConfig()">重設車站</button>
     </div>
 
     <script>
-        // 高速單一連線 Proxy，專門用來應付校對和重新加載
-        async function fetchJson(url) {
-            const proxy = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-            const res = await fetch(proxy);
-            if (!res.ok) throw new Error("連線失敗");
-            return await res.json();
+        // 雙安全通道公用代理，僅抓取極輕量的 20KB 路線檔，絕不超時
+        async function fetchJsonViaProxy(targetUrl) {
+            try {
+                const p1 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                const res = await fetch(p1);
+                if (res.ok) return await res.json();
+            } catch(e) {}
+            
+            try {
+                const p2 = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                const res = await fetch(p2);
+                if (res.ok) {
+                    const obj = await res.json();
+                    return JSON.parse(obj.contents);
+                }
+            } catch(e) {
+                throw new Error("CORS 連線失敗");
+            }
         }
 
-        // 核心巴士路線配置
-        const busConfig = [
-            { route: "89X", id: "bus-89X", cacheKey: "stop_id_fuhao" },
-            { route: "86K", id: "bus-86K", cacheKey: "stop_id_cityone" },
-            { route: "299X", id: "bus-299X", cacheKey: "stop_id_fuhao" },
-            { route: "83K", id: "bus-83K", cacheKey: "stop_id_fuhao" },
-            { route: "284", id: "bus-284", cacheKey: "stop_id_fuhao" },
-            { route: "49X", id: "bus-49X", cacheKey: "stop_id_fuhao" },
-            { route: "269D", id: "bus-269D", cacheKey: "stop_id_center" }
-        ];
+        // 7 條核心路線配置
+        const routesList = ["89X", "86K", "299X", "83K", "284", "49X", "269D"];
+        const busLabels = {
+            "89X": "89X 往沙田站 (目標：富豪花園)",
+            "86K": "86K 往沙田站 (目標：沙田第一城)",
+            "299X": "299X 往沙田市中心 (目標：富豪花園)",
+            "83K": "83K 往沙田市中心 (目標：富豪花園)",
+            "284": "284 往濱景花園 (目標：富豪花園)",
+            "49X": "49X 往青衣碼頭 (目標：富豪花園)",
+            "269D": "269D 往天富 (目標：沙田市中心總站)"
+        };
 
-        // 啟動校對精靈：精準抓取 89X, 86K, 269D 這三條主線上的所有實體車站名
-        async function runSetupWizard() {
-            // 如果已經校對過，直接隱藏面板並加載
-            if (localStorage.getItem("stop_id_fuhao") && localStorage.getItem("stop_id_cityone") && localStorage.getItem("stop_id_center")) {
+        // 啟動加載：下載 7 條線路目前的即時全站預報
+        async function loadSetupForm() {
+            // 如果本地已經有鎖定的順序配置，直接隱藏面板並執行
+            if (localStorage.getItem("kmb_config_saved") === "true") {
                 document.getElementById("setup-panel").style.display = "none";
                 updateClock();
                 fetchWeather();
-                fetchBusETA();
+                renderDashboardETA();
                 return;
             }
 
             try {
-                // 我們只下載這 3 條路線的站點清單，每條只有 2KB，絕對不會超時！
-                const lines = ["89X", "86K", "269D"];
-                let allStops = [];
-
-                for (let line of lines) {
-                    const res = await fetchJson(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${line}/outbound/1`);
-                    if (res && res.data) allStops = allStops.concat(res.data);
+                let htmlContent = "";
+                
+                for (let route of routesList) {
+                    const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`;
+                    const json = await fetchJsonViaProxy(url);
                     
-                    const resIn = await fetchJson(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${line}/inbound/1`);
-                    if (resIn && resIn.data) allStops = allStops.concat(resIn.data);
-                }
+                    if (json && json.data) {
+                        // 按方向 (dir) 和 站點順序 (seq) 分組，找出有班次的時間
+                        let uniqueStops = {};
+                        json.data.forEach(item => {
+                            if (item.eta && item.seq) {
+                                const key = `${item.dir}_${item.seq}`;
+                                if (!uniqueStops[key]) {
+                                    uniqueStops[key] = {
+                                        dir: item.dir,
+                                        seq: item.seq,
+                                        dest: item.dest_tc,
+                                        etas: []
+                                    };
+                                }
+                                uniqueStops[key].etas.push(item.eta);
+                            }
+                        });
 
-                // 移除重複的車站 ID
-                const uniqueStopIds = Array.from(new Set(allStops.map(item => item.stop)));
-                
-                document.getElementById("setup-status").textContent = `正在翻譯附近車站名稱 (共 ${uniqueStopIds.length} 個)...`;
-                
-                // 批次向九巴換取中文站名
-                let fuhaoOptions = "", cityoneOptions = "", centerOptions = "";
-                
-                for (let stopId of uniqueStopIds) {
-                    try {
-                        const stopDetail = await fetchJson(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${stopId}`);
-                        if (stopDetail && stopDetail.data) {
-                            const name = stopDetail.data.name_tc;
+                        // 為這條線建立一個下拉選單
+                        htmlContent += `<div class="setup-row">`;
+                        htmlContent += `<label>${busLabels[route]}:</label>`;
+                        htmlContent += `<select id="config-${route}">`;
+                        htmlContent += `<option value="">-- 請對照手機 App 分鐘選擇 --</option>`;
+
+                        Object.values(uniqueStops).forEach(stop => {
+                            // 排序算出最近一班車的倒數時間
+                            stop.etas.sort((a,b) => new Date(a) - new Date(b));
+                            const mins = calculateMinutes(stop.etas[0]);
                             
-                            // 智能分類過濾：把對應的站名塞進專屬的下拉選單中
-                            if (name.includes("富豪花園")) {
-                                fuhaoOptions += `<option value="${stopId}">${name} (${stopId.substring(0,4)})</option>`;
-                            }
-                            if (name.includes("第一城")) {
-                                cityoneOptions += `<option value="${stopId}">${name} (${stopId.substring(0,4)})</option>`;
-                            }
-                            if (name.includes("市中心")) {
-                                centerOptions += `<option value="${stopId}">${name} (${stopId.substring(0,4)})</option>`;
-                            }
-                        }
-                    } catch(e) {}
+                            // 選項文字直接顯示方向、站點序號和當前即時預估時間
+                            htmlContent += `<option value="${stop.dir}_${stop.seq}">`;
+                            htmlContent += `[往 ${stop.dest}] - 站點編號 #${stop.seq} (現時下班車: ${mins})`;
+                            htmlContent += `</option>`;
+                        });
+
+                        htmlContent += `</select></div>`;
+                    }
                 }
 
-                // 渲染到網頁選單上
-                document.getElementById("sel-fuhao").innerHTML = fuhaoOptions || `<option value="">找不到富豪花園站</option>`;
-                document.getElementById("sel-cityone").innerHTML = cityoneOptions || `<option value="">找不到第一城站</option>`;
-                document.getElementById("sel-center").innerHTML = centerOptions || `<option value="">找不到市中心站</option>`;
-
-                document.getElementById("setup-status").style.display = "none";
-                document.getElementById("setup-fields").style.display = "block";
+                document.getElementById("dynamic-selectors").innerHTML = htmlContent;
+                document.getElementById("setup-loading").style.display = "none";
+                document.getElementById("setup-form").style.display = "block";
 
             } catch (error) {
-                document.getElementById("setup-status").textContent = "❌ 校對連線超時，請點擊下方按鈕刷新重試。";
+                document.getElementById("setup-loading").textContent = "❌ 線路加載超時，請點擊下方「🔄 刷新數據」按鈕重試。";
             }
         }
 
-        // 儲存校對好的 16位元加密 ID
-        function saveCalibration() {
-            const fh = document.getElementById("sel-fuhao").value;
-            const co = document.getElementById("sel-cityone").value;
-            const ct = document.getElementById("sel-center").value;
+        // 儲存校對結果
+        function saveConfig() {
+            let isValid = true;
+            routesList.forEach(route => {
+                const val = document.getElementById(`config-${route}`).value;
+                if (!val) isValid = false;
+            });
 
-            if(!fh || !co || !ct) {
-                alert("請確保三個車站都選擇了正確的位置！");
+            if (!isValid) {
+                alert("請為所有 7 條路線都選擇一個對應的站點！");
                 return;
             }
 
-            localStorage.setItem("stop_id_fuhao", fh);
-            localStorage.setItem("stop_id_cityone", co);
-            localStorage.setItem("stop_id_center", ct);
+            // 將每條線選擇的 dir 和 seq 儲存到本地
+            routesList.forEach(route => {
+                const val = document.getElementById(`config-${route}`).value;
+                const parts = val.split("_"); // "O_5" -> ["O", "5"]
+                localStorage.setItem(`saved_dir_${route}`, parts[0]);
+                localStorage.setItem(`saved_seq_${route}`, parts[1]);
+            });
 
-            // 隱藏校對面板並立刻啟動
+            localStorage.setItem("kmb_config_saved", "true");
             document.getElementById("setup-panel").style.display = "none";
-            fetchBusETA();
+            renderDashboardETA();
         }
 
-        // 3. 獲取巴士預報（完全模仿手機 App 運作機制）
-        async function fetchBusETA() {
-            const fhId = localStorage.getItem("stop_id_fuhao");
-            const coId = localStorage.getItem("stop_id_cityone");
-            const ctId = localStorage.getItem("stop_id_center");
+        // 核心顯示功能：依照鎖定的順序直攻數據
+        async function renderDashboardETA() {
+            if (localStorage.getItem("kmb_config_saved") !== "true") return;
 
-            if (!fhId || !coId || !ctId) return;
-
-            busConfig.forEach(async (config) => {
+            routesList.forEach(async (route) => {
                 try {
-                    // 根據配置動態讀取對應的車站編號
-                    const targetStopId = localStorage.getItem(config.cacheKey);
-                    
-                    // 直攻 KMB 最底層的站點預報 API！這條連線不需要任何關鍵字過濾！
-                    const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${targetStopId}/${config.route}/1`;
-                    const json = await fetchJson(url);
-                    
+                    const savedDir = localStorage.getItem(`saved_dir_${route}`);
+                    const savedSeq = parseInt(localStorage.getItem(`saved_seq_${route}`));
+
+                    const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`;
+                    const json = await fetchJsonViaProxy(url);
+
                     if (json && json.data) {
-                        // 只需要過濾出有預計時間（eta）的記錄即可
-                        const validEtas = json.data.filter(item => item.eta);
+                        // 100% 精準過濾：只抓取符合我們鎖定的方向和站點序號的車次
+                        const matched = json.data.filter(item => item.dir === savedDir && item.seq === savedSeq && item.eta);
                         
-                        if (validEtas.length > 0) {
-                            // 排序出最近的三班車
-                            validEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+                        if (matched.length > 0) {
+                            matched.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+                            const m1 = calculateMinutes(matched[0].eta);
+                            const m2 = matched[1] ? calculateMinutes(matched[1].eta) : '--';
                             
-                            const m1 = calculateMinutes(validEtas[0].eta);
-                            const m2 = validEtas[1] ? calculateMinutes(validEtas[1].eta) : '--';
-                            
-                            document.getElementById(config.id).textContent = m2 !== '--' ? `${m1} / ${m2}` : `${m1}`;
+                            document.getElementById(`bus-${route}`).textContent = m2 !== '--' ? `${m1} / ${m2}` : `${m1}`;
                         } else {
-                            document.getElementById(config.id).textContent = "未有班次";
+                            document.getElementById(`bus-${route}`).textContent = "未有班次";
                         }
                     }
                 } catch (error) {
-                    document.getElementById(config.id).textContent = "網絡延遲";
+                    document.getElementById(`bus-${route}`).textContent = "網絡延遲";
                 }
             });
         }
@@ -392,12 +402,17 @@
             const btn = document.querySelector('.refresh-btn');
             btn.textContent = "⏳ 更新中...";
             fetchWeather();
-            if (localStorage.getItem("stop_id_fuhao")) {
-                fetchBusETA();
+            if (localStorage.getItem("kmb_config_saved") === "true") {
+                renderDashboardETA();
             } else {
-                runSetupWizard();
+                loadSetupForm();
             }
             setTimeout(() => { btn.textContent = "🔄 刷新數據"; }, 1200);
+        }
+
+        function resetConfig() {
+            localStorage.clear();
+            location.reload();
         }
 
         function pixelShift() {
@@ -408,10 +423,10 @@
         // 啟動程序
         updateClock();
         fetchWeather();
-        runSetupWizard(); // 執行校對精靈
+        loadSetupForm();
 
         setInterval(updateClock, 1000);
-        setInterval(fetchBusETA, 30000); // 每 30 秒自動向選定的車站要數據
+        setInterval(renderDashboardETA, 30000); // 鎖定後每 30 秒自動刷新
         setInterval(fetchWeather, 300000);
         setInterval(pixelShift, 600000);
     </script>

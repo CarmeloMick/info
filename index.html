@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Transit Command Center (Grid Edition)</title>
+  <title>All-in-One Transit & Weather Command Center</title>
   <style>
     /* 全局高級深色主題色彩規格 (完美對齊目標大屏圖片) */
     * {
@@ -37,7 +37,7 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
-    /* 區塊 C：頂部天氣面版 */
+    /* 區塊一：頂部天氣面版 */
     .weather-card {
       display: flex;
       gap: 3vw;
@@ -88,7 +88,7 @@
       overflow-y: auto;
     }
 
-    /* 區塊 D：特別交通消息組件 */
+    /* 區塊二：特別交通消息組件 */
     .traffic-news-card {
       height: 10vh;
       display: flex;
@@ -118,7 +118,7 @@
       text-overflow: ellipsis;
     }
 
-    /* 區塊 B：實時巴士看板分區 */
+    /* 區塊三：實時巴士看板分區 */
     .transit-card {
       flex: 1;
       display: flex;
@@ -126,37 +126,13 @@
       gap: 1.5vh;
       min-height: 0;
     }
-    
-    /* 高級導航 Pills Tabs */
-    .tab-navigation {
-      display: flex;
-      gap: 1vw;
-      border-bottom: 1px solid #22314d;
-      padding-bottom: 1.2vh;
-    }
-    .tab-pill {
-      background-color: #1e293b;
-      color: #94a3b8;
-      border: none;
-      padding: 1vh 2vw;
-      font-size: 2vh;
-      font-weight: bold;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .tab-pill.active {
-      background-color: #2563eb; 
-      color: #ffffff;
-      box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
-    }
 
-    /* 🛠️ 終極修復：改用雙列並排 Grid 矩陣排版，拒絕全部路線擠在同一列 */
+    /* 高級雙列 Grid 矩陣排版 (所有路線合體同屏展開) */
     .bus-grid-container {
       flex: 1;
       display: grid;
       grid-template-columns: repeat(2, 1fr); /* 完美平分左右兩列 */
-      gap: 1.5vh 1.5vw;
+      gap: 1.2vh 1.5vw;
       overflow-y: auto;
       min-height: 0;
       padding-right: 0.5vw;
@@ -166,23 +142,23 @@
       background-color: #0f172a;
       border: 1px solid #1e293b;
       border-radius: 12px;
-      padding: 2vh 2vw;
+      padding: 1.5vh 2vw;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 12vh; /* 固定卡片高度，排版更整齊 */
+      height: 10.5vh; /* 縮減卡片高度，確保 7 條線路同屏不滾動 */
     }
     .bus-info-meta { display: flex; flex-direction: column; }
     .route-badge-number {
-      font-size: 4.5vh;
+      font-size: 4.2vh;
       font-weight: 900;
       color: #eab308; 
       line-height: 1;
     }
     .route-destination-text {
-      font-size: 1.8vh;
+      font-size: 1.7vh;
       color: #64748b;
-      margin-top: 0.5vh;
+      margin-top: 0.4vh;
     }
     .arrival-slots-wrapper { display: flex; gap: 3vw; }
     .eta-slot-item {
@@ -193,14 +169,14 @@
       min-width: 8vw;
     }
     .eta-countdown-display {
-      font-size: 3.4vh;
+      font-size: 3.2vh;
       font-weight: bold;
       font-variant-numeric: tabular-nums;
     }
     .eta-countdown-display.incoming { color: #22c55e; }
-    .eta-countdown-display.no-service { color: #475569; font-size: 2.2vh; font-weight: normal; }
+    .eta-countdown-display.no-service { color: #475569; font-size: 2vh; font-weight: normal; }
     .eta-absolute-clock-time {
-      font-size: 1.7vh;
+      font-size: 1.6vh;
       color: #64748b;
       margin-top: 0.2vh;
       font-variant-numeric: tabular-nums;
@@ -237,47 +213,29 @@
     </section>
 
     <section class="glass-card transit-card">
-      <div class="tab-navigation">
-        <button class="tab-pill active" onclick="switchActiveTab('REGAL_NORTH')">富豪花園 (北行)</button>
-        <button class="tab-pill" onclick="switchActiveTab('REGAL_SOUTH')">富豪花園 (南行)</button>
-        <button class="tab-pill" onclick="switchActiveTab('TOWN_CENTER')">沙田市中心</button>
-      </div>
-      <div id="active-bus-rows-container" class="bus-grid-container"></div>
+      <div id="active-bus-rows-container" class="bus-grid-container">
+        </div>
     </section>
 
   </div>
 
   <script>
-    // 嚴格隔離的真實物理站牌 ID 映射庫（絕不互相交叉污染，實現精確分頁切換）
-    const DASHBOARD_MATRIX = {
-      pollingIntervalMs: 30000, 
-      tabs: {
-        REGAL_NORTH: {
-          stopId: "D262C76A28469C95", // 富豪花園北行 shelter 真實 ID
-          routes: [
-            { route: "86K",  label: "往 沙田站" },
-            { route: "89X",  label: "往 沙田站" },
-            { route: "299X", label: "往 沙田市中心" },
-            { route: "83K",  label: "往 沙田市中心 (循環線)" }
-          ]
-        },
-        REGAL_SOUTH: {
-          stopId: "89D529BB626B5DFA", // 富豪花園南行 shelter 真實 ID
-          routes: [
-            { route: "284",  label: "往 濱景花園 (循環線)" },
-            { route: "49X",  label: "往 青衣碼頭" }
-          ]
-        },
-        TOWN_CENTER: {
-          stopId: "967527636FA7D962", // 沙田市中心總站 269D 專屬坑位 ID
-          routes: [
-            { route: "269D", label: "往 天富" }
-          ]
-        }
-      }
-    };
+    // 1. 全同屏大屏監控的 7 條目標路線清單
+    const MONITOR_ROUTES_LIST = [
+      { route: "86K",  label: "往 沙田站" },
+      { route: "89X",  label: "往 沙田站" },
+      { route: "299X", label: "往 沙田市中心" },
+      { route: "83K",  label: "往 沙田市中心 (循環線)" },
+      { route: "284",  label: "往 濱景花園 (循環線)" },
+      { route: "49X",  label: "往 青衣碼頭" },
+      { route: "269D", label: "往 天富" }
+    ];
 
-    let currentTabKey = "REGAL_NORTH";
+    // 名冊掃描關鍵字（確保能撈到富豪花園全線、沙田市中心總站的所有加密 HASH）
+    const SEARCH_KEYWORDS = ["富豪花園", "沙田市中心", "沙田市中心總站"];
+    
+    const POLLING_INTERVAL_MS = 30000; // 30秒高頻直連刷新
+    let globalResolvedStopIds = []; // 儲存動態掃描出的所有相關物理站牌 HASH
     let globalCachedEtaStore = {}; 
 
     const DOM = {
@@ -297,22 +255,12 @@
       DOM.clock.textContent = `${now.getMonth() + 1}月${now.getDate()}日 (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-HK', { hour12: false })}`;
     }
 
-    function switchActiveTab(tabKey) {
-      currentTabKey = tabKey;
-      document.querySelectorAll('.tab-pill').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabKey));
-      });
-      // 點擊分頁時立即重新撈取該站點數據，免除舊數據殘留
-      executeTransitPipeline();
-    }
-
-    // 繪製高級 Grid 看板 UI
-    function renderActiveTabUI() {
+    // 渲染 7 條合體線路看板
+    function renderGlobalDashboardUI() {
       DOM.busContainer.innerHTML = '';
-      const tabConfig = DASHBOARD_MATRIX.tabs[currentTabKey];
       const now = new Date();
 
-      tabConfig.routes.forEach((r) => {
+      MONITOR_ROUTES_LIST.forEach((r) => {
         const row = document.createElement('div');
         row.className = 'bus-data-row';
         const routeEtas = globalCachedEtaStore[r.route] || [];
@@ -322,15 +270,18 @@
           if (routeEtas[seq]) {
             const data = routeEtas[seq];
             const targetTime = new Date(data.eta);
-            const diffMins = Math.max(0, Math.floor((targetTime - now) / 60000));
+            const diffMins = Math.floor((targetTime - now) / 60000);
             
             const absHour = String(targetTime.getHours()).padStart(2, '0');
             const absMin = String(targetTime.getMinutes()).padStart(2, '0');
             
-            const isIncoming = diffMins === 0;
+            // 💡 倒數小於或等於 0 分鐘皆標記為「即將抵達」
+            const isIncoming = diffMins <= 0;
+            const timeStr = isIncoming ? "即將抵達" : `${diffMins} 分鐘`;
+            
             slotHtml += `
               <div class="eta-slot-item">
-                <div class="eta-countdown-display ${isIncoming ? 'incoming' : ''}">${isIncoming ? '即將抵達' : `${diffMins} 分鐘`}</div>
+                <div class="eta-countdown-display ${isIncoming ? 'incoming' : ''}">${timeStr}</div>
                 <div class="eta-absolute-clock-time">${absHour}:${absMin} ${data.rmk_tc || ''}</div>
               </div>`;
           } else {
@@ -353,46 +304,86 @@
     }
 
     /**
-     * 核心優化：隔離直連獲取實時預報 + 終極過濾老舊班次
+     * 【動態掃描引擎】
+     * 直接去 data.etabus.gov.hk 下載最新名冊，動態抽取富豪花園、沙田市中心全部物理站點 ID
      */
-    async function executeTransitPipeline() {
-      const now = new Date();
-      const tabConfig = DASHBOARD_MATRIX.tabs[currentTabKey];
-      
+    async function dynamicallyScanValidStopIds() {
+      DOM.weatherSummary.textContent = "正在同步政府九巴名冊中心以獲取最新生效站點 ID...";
       try {
-        // 精確直連當前 Tab 對應的真實物理站牌，絕不交叉污染
-        const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${tabConfig.stopId}`);
+        const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const rawList = json.data || [];
+        const allStops = json.data || [];
 
-        // 重設局部緩存
-        globalCachedEtaStore = {};
+        // 模糊篩選出所有與目標地點關聯的 16 位元加密 HASH ID
+        const matchedIds = allStops
+          .filter(s => s && s.name_tc && SEARCH_KEYWORDS.some(kw => s.name_tc.includes(kw)))
+          .map(s => s.stop);
 
-        tabConfig.routes.forEach(userRoute => {
-          const filteredEtas = rawList.filter(item => {
-            if (item.route !== userRoute.route || !item.eta) return false;
-            
-            const targetTime = new Date(item.eta);
-            // 💡【過濾黑科技】只要到站時間早過電腦目前的即時時間，代表車已經開走，直接丟棄退走！
-            if (targetTime - now < 0) return false;
-            
-            return true;
-          });
-
-          // 依到站時間由近至遠嚴格排序
-          filteredEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
-          globalCachedEtaStore[userRoute.route] = filteredEtas;
-        });
-
-        // 刷新重繪畫面
-        renderActiveTabUI();
+        globalResolvedStopIds = [...new Set(matchedIds)];
+        return true;
       } catch (err) {
-        console.error("Transit Pipeline Error:", err);
+        console.error("Gov Open Data Error:", err);
+        DOM.weatherSummary.innerHTML = `<span style="color:#f43f5e;font-weight:bold;">名冊同步失敗: ${err.message}。請確認網絡狀況並重新整理。</span>`;
+        return false;
       }
     }
 
-    // 香港天文台大數據直連
+    /**
+     * 【並發大數據管道 + 走車無痕抹除】
+     * 同時向所有相關亭位發起實時請求，並在內存內統一洗牌去重、依照車號歸位
+     */
+    async function executeConcurrentTransitPoll() {
+      if (globalResolvedStopIds.length === 0) return;
+
+      const promises = globalResolvedStopIds.map(async (sid) => {
+        try {
+          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${sid}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          return json.data || [];
+        } catch (e) { return []; }
+      });
+
+      const results = await Promise.all(promises);
+      const megaMergedList = results.flat();
+
+      // 重設全局緩存
+      globalCachedEtaStore = {};
+      const now = new Date();
+
+      // 洗牌分流：將撈到的幾百班車，直接按 7 條路線編號分流對號入座
+      MONITOR_ROUTES_LIST.forEach(userRoute => {
+        const matchedRawEtas = megaMergedList.filter(item => item.route === userRoute.route && item.eta);
+        
+        const uniqueEtas = [];
+        const seenTimes = new Set();
+        
+        matchedRawEtas.forEach(item => {
+          if (!seenTimes.has(item.eta)) {
+            const targetTime = new Date(item.eta);
+            const diffMins = Math.floor((targetTime - now) / 60000);
+            
+            // 💡【走車退走優化】
+            // 考慮到本地電腦與巴士伺服器可能存在幾十秒的時鐘誤差，
+            // 這裡設定當到站時間「落後當前時間超過 1 分鐘（-1 分鐘）」時，才判定架車已開走並無痕退走。
+            if (diffMins < -1) return;
+
+            seenTimes.add(item.eta);
+            uniqueEtas.push(item);
+          }
+        });
+
+        // 依到站時間由近至遠嚴格排序
+        uniqueEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+        globalCachedEtaStore[userRoute.route] = uniqueEtas;
+      });
+
+      // 重繪全屏看板
+      renderGlobalDashboardUI();
+    }
+
+    // 香港天文台與特別交通消息對接
     async function fetchLiveNewsAndWeather() {
       const cacheBust = Date.now();
       try {
@@ -432,12 +423,18 @@
       setInterval(runLiveClock, 1000);
       runLiveClock();
 
-      // 首次啟動定時調度管道
+      renderGlobalDashboardUI();
+
+      // 第一步：動態讀取官方開放數據名冊中心
+      const setupSuccess = await dynamicallyScanValidStopIds();
+      if (!setupSuccess) return;
+
+      // 第二步：啟動每 30 秒高頻輪詢管道
       async function triggerPipeline() {
-        await Promise.all([executeTransitPipeline(), fetchLiveNewsAndWeather()]);
+        await Promise.all([executeConcurrentTransitPoll(), fetchLiveNewsAndWeather()]);
       }
       
-      setInterval(triggerPipeline, DASHBOARD_MATRIX.pollingIntervalMs);
+      setInterval(triggerPipeline, POLLING_INTERVAL_MS);
       triggerPipeline();
     }
 

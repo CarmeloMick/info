@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Smart Transit & Weather Dashboard</title>
   <style>
-    /* 1. 全局高級深色主題重設 (完美對齊目標圖片色彩與質感) */
+    /* 全局高級深色主題重設 (完美對齊目標圖片色彩與質感) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -21,7 +21,6 @@
       padding: 1.5vh 1.5vw;
     }
 
-    /* 主網格排版容器 */
     .dashboard-container {
       display: flex;
       flex-direction: column;
@@ -29,16 +28,16 @@
       gap: 1.5vh;
     }
 
-    /* 高級毛玻璃質感卡片基底 */
+    /* 高級灰藍色面板卡片 */
     .glass-card {
-      background-color: #131c2e; /* 高級灰藍色面板色塊 */
+      background-color: #131c2e; 
       border: 1px solid #22314d;
       border-radius: 16px;
       padding: 2vh 2vw;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
-    /* 區塊 C：頂部大氣科學與時鐘面版 */
+    /* 區塊 C：頂部天氣面版 */
     .weather-card {
       display: flex;
       gap: 3vw;
@@ -103,7 +102,6 @@
     }
     .traffic-icon {
       font-size: 3.5vh;
-      animation: pulse-glow 2s infinite;
     }
     .traffic-content-box {
       flex: 1;
@@ -114,7 +112,7 @@
     .traffic-title {
       font-size: 2vh;
       font-weight: bold;
-      color: #f43f5e; /* 醒目警告紅 */
+      color: #f43f5e; 
       margin-bottom: 0.2vh;
     }
     .traffic-text-container {
@@ -125,7 +123,7 @@
       text-overflow: ellipsis;
     }
 
-    /* 區塊 B：實時巴士看板分區 */
+    /* 區塊 B：巴士看板分區 */
     .transit-card {
       flex: 1;
       display: flex;
@@ -134,7 +132,7 @@
       min-height: 0;
     }
     
-    /* 高階導航 Pills Tabs */
+    /* 高級導航 Pills Tabs */
     .tab-navigation {
       display: flex;
       gap: 1vw;
@@ -150,15 +148,14 @@
       font-weight: bold;
       border-radius: 30px;
       cursor: pointer;
-      transition: all 0.2s ease-in-out;
     }
     .tab-pill.active {
-      background-color: #2563eb; /* 經典科技藍 */
+      background-color: #2563eb; 
       color: #ffffff;
       box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
     }
 
-    /* 巴士數據行格陣列 */
+    /* 巴士數據網格 */
     .bus-grid-container {
       flex: 1;
       display: flex;
@@ -183,7 +180,7 @@
     .route-badge-number {
       font-size: 4.2vh;
       font-weight: 900;
-      color: #eab308; /* 經典智慧金黃色 */
+      color: #eab308; 
       line-height: 1;
     }
     .route-destination-text {
@@ -208,19 +205,13 @@
       font-variant-numeric: tabular-nums;
     }
     .eta-countdown-display.incoming {
-      color: #22c55e; /* 即將抵達綠 */
+      color: #22c55e; 
     }
     .eta-absolute-clock-time {
       font-size: 1.7vh;
       color: #64748b;
       margin-top: 0.2vh;
       font-variant-numeric: tabular-nums;
-    }
-
-    @keyframes pulse-glow {
-      0% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.8; }
     }
   </style>
 </head>
@@ -241,7 +232,7 @@
         </div>
       </div>
       <div id="weather-report-summary" class="weather-right-text">
-        正在初始化全自動數據流掃描模組...
+        正在安全同步香港天文台大數據中心，獲取即時天氣概況及區域分區預測...
       </div>
     </header>
 
@@ -259,18 +250,18 @@
         <button class="tab-pill" onclick="switchActiveTab('REGAL_SOUTH')">富豪花園 (南行)</button>
         <button class="tab-pill" onclick="switchActiveTab('TOWN_CENTER')">沙田市中心</button>
       </div>
-      <div id="active-bus-rows-container" class="bus-grid-container">
-        </div>
+      <div id="active-bus-rows-container" class="bus-grid-container"></div>
     </section>
 
   </div>
 
   <script>
-    // 定義面板所需的目標線路配置
-    const PANEL_VIEW_CONFIG = {
-      pollingIntervalMs: 30000, // 30秒高頻對接刷新
+    // 內置精確 Scoped 數據庫，徹底杜絕無班次及名冊閃退問題
+    const SMART_ENGINE_DB = {
+      pollingIntervalMs: 30000, // 30秒直連刷新
       tabs: {
         REGAL_NORTH: {
+          stopId: "D262C76A28469C95", 
           routes: [
             { route: "86K",  label: "往 沙田站" },
             { route: "89X",  label: "往 沙田站" },
@@ -279,12 +270,14 @@
           ]
         },
         REGAL_SOUTH: {
+          stopId: "89D529BB626B5DFA", 
           routes: [
             { route: "284",  label: "往 濱景花園 (循環線)" },
             { route: "49X",  label: "往 青衣碼頭" }
           ]
         },
         TOWN_CENTER: {
+          stopId: "967527636FA7D962", 
           routes: [
             { route: "269D", label: "往 天富" }
           ]
@@ -292,8 +285,6 @@
       }
     };
 
-    const CACHE_KEY_STOPS = "DASHBOARD_LIVE_STOPS_V6";
-    let globalResolvedStopIds = []; // 存儲實時掃描出來的真實 HASH 清單
     let currentTabKey = "REGAL_NORTH";
     let globalCachedEtaStore = {}; 
 
@@ -308,30 +299,31 @@
       busContainer: document.getElementById('active-bus-rows-container')
     };
 
-    // 1. 高精確度時鐘
     function runLiveClock() {
       const now = new Date();
       const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-      DOM.clock.textContent = `${now.getMonth() + 1}月${now.getDate()}日 (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-HK', { hour12: false })}`;
+      DOM.clock.textContent = (now.getMonth() + 1) + "月" + now.getDate() + "日 (" + weekdays[now.getDay()] + ") " + now.toLocaleTimeString('zh-HK', { hour12: false });
     }
 
-    // 2. Tab 切換
     function switchActiveTab(tabKey) {
       currentTabKey = tabKey;
-      document.querySelectorAll('.tab-pill').forEach(btn => {
-        if (btn.getAttribute('onclick').includes(tabKey)) btn.classList.add('active');
-        else btn.classList.remove('active');
-      });
+      var buttons = document.querySelectorAll('.tab-pill');
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].getAttribute('onclick').indexOf(tabKey) !== -1) {
+          buttons[i].classList.add('active');
+        } else {
+          buttons[i].classList.remove('active');
+        }
+      }
       renderActiveTabUI();
     }
 
-    // 3. 渲染巴士畫面
     function renderActiveTabUI() {
       DOM.busContainer.innerHTML = '';
-      const tabConfig = PANEL_VIEW_CONFIG.tabs[currentActiveTabKey];
+      const tabConfig = SMART_ENGINE_DB.tabs[currentTabKey];
       const now = new Date();
 
-      tabConfig.routes.forEach((r, idx) => {
+      tabConfig.routes.forEach(function(r, idx) {
         const row = document.createElement('div');
         row.className = 'bus-data-row';
         const routeEtas = globalCachedEtaStore[r.route] || [];
@@ -347,124 +339,72 @@
             const absMin = String(targetTime.getMinutes()).padStart(2, '0');
             
             const isIncoming = diffMins === 0;
-            const timeDisplay = isIncoming ? "即將抵達" : `${diffMins} 分鐘`;
+            const timeDisplay = isIncoming ? "即將抵達" : diffMins + " 分鐘";
             const incomingClass = isIncoming ? "incoming" : "";
-            const clockDisplay = `${absHour}:${absMin} ${data.rmk_tc || ''}`;
+            const clockDisplay = absHour + ":" + absMin + " " + (data.rmk_tc || '');
 
-            slotHtml += `
-              <div class="eta-slot-item">
-                <div class="eta-countdown-display ${incomingClass}">${timeDisplay}</div>
-                <div class="eta-absolute-clock-time">${clockDisplay}</div>
-              </div>`;
+            slotHtml += '<div class="eta-slot-item">' +
+                        '<div class="eta-countdown-display ' + incomingClass + '">' + timeDisplay + '</div>' +
+                        '<div class="eta-absolute-clock-time">' + clockDisplay + '</div>' +
+                        '</div>';
           } else {
-            slotHtml += `
-              <div class="eta-slot-item">
-                <div class="eta-countdown-display">${seq === 0 ? '暫無班次' : '--'}</div>
-                <div class="eta-absolute-clock-time"></div>
-              </div>`;
+            slotHtml += '<div class="eta-slot-item">' +
+                        '<div class="eta-countdown-display">' + (seq === 0 ? '暫無班次' : '--') + '</div>' +
+                        '<div class="eta-absolute-clock-time"></div>' +
+                        '</div>';
           }
         }
 
-        row.innerHTML = `
-          <div class="bus-meta">
-            <div class="route-badge-number">${r.route}</div>
-            <div class="route-destination-text">${r.label}</div>
-          </div>
-          <div class="arrival-slots-wrapper">${slotHtml}</div>
-        `;
+        row.innerHTML = '<div class="bus-info-meta">' +
+                        '<div class="route-badge-number">' + r.route + '</div>' +
+                        '<div class="route-destination-text">' + r.label + '</div>' +
+                        '</div>' +
+                        '<div class="arrival-slots-wrapper">' + slotHtml + '</div>';
         DOM.busContainer.appendChild(row);
       });
     }
 
-    /**
-     * 【智能核心】智慧雙軌純文字掃描引擎 (0 記憶體壓力)
-     * 完美避開舊 iPad JSON 解析崩潰 Bug，100% 撈出最新生效的 HASH ID
-     */
-    async function autoResolveStopMasterIds() {
-      const cached = localStorage.getItem(CACHE_KEY_STOPS);
-      if (cached) {
+    // 採用舊 iPad 100% 支援的傳統非同步循環，徹底擯棄 Promise.allSettled
+    async function executeGlobalTransitPoll() {
+      const keys = Object.keys(SMART_ENGINE_DB.tabs);
+      const megaMergedList = [];
+
+      for (let i = 0; i < keys.length; i++) {
+        const tabKey = keys[i];
+        const sid = SMART_ENGINE_DB.tabs[tabKey].stopId;
         try {
-          globalResolvedStopIds = JSON.parse(cached);
-          if (globalResolvedStopIds.length > 0) return true;
-        } catch(e) { localStorage.removeItem(CACHE_KEY_STOPS); }
-      }
-
-      DOM.weatherSummary.textContent = "首次啟動：正在為舊 iPad 優化解密全港巴士線路數據 (預計 3 秒)...";
-      try {
-        // 直連政府實時數據站點，以純文字流 (.text()) 下載，不佔內存
-        const res = await fetch('https://rt.data.gov.hk/v1/transport/kmb/stop');
-        if (!res.ok) throw new Error();
-        const text = await res.text();
-
-        // 採用高效的文字切片技術，精準揪出目標 HASH 碼
-        const blocks = text.split(/\{|\}/);
-        const foundIds = [];
-        
-        blocks.forEach(block => {
-          if (block.includes('"name_tc":"富豪花園"') || block.includes('"name_tc":"沙田市中心總站"')) {
-            const match = block.match(/"stop"\s*:\s*"([A-F0-9]+)"/);
-            if (match) {
-              foundIds.push(match[1]);
-            }
-          }
-        });
-
-        globalResolvedStopIds = [...new Set(foundIds)];
-
-        if (globalResolvedStopIds.length === 0) {
-          DOM.weatherSummary.textContent = "數據通訊錯誤，請檢查網路並重新整理。";
-          return false;
-        }
-
-        // 鎖定進入硬件儲存，下次開機 0 秒載入
-        localStorage.setItem(CACHE_KEY_STOPS, JSON.stringify(globalResolvedStopIds));
-        return true;
-      } catch (err) {
-        console.error(err);
-        DOM.weatherSummary.textContent = "網絡同步超時，請重新整理網頁。";
-        return false;
-      }
-    }
-
-    /**
-     * 5. 多重 HASH 併發直連與前端數據聚合
-     */
-    async function executeConcurrentTransitPoll() {
-      if (globalResolvedStopIds.length === 0) return;
-
-      // 同時向政府發起所有目標坑位的實時查詢
-      const promises = globalResolvedStopIds.map(async (sid) => {
-        try {
-          const res = await fetch(`https://rt.data.gov.hk/v1/transport/kmb/stop-eta/${sid}`);
+          // 直連九巴開放數據公共節點 (天然支援 CORS 跨域)
+          const res = await fetch('https://data.etabus.kmb.hk/v1/transport/kmb/stop-eta/' + sid);
           if (res.ok) {
             const json = await res.json();
-            return json.data || [];
+            const arr = json.data || [];
+            for (let j = 0; j < arr.length; j++) {
+              megaMergedList.push(arr[j]);
+            }
           }
-        } catch (e) {}
-        return [];
-      });
+        } catch (e) { console.error(e); }
+      }
 
-      const results = await Promise.all(promises);
-      const megaMergedList = results.flat();
-
-      // 清空舊緩存，對號入座
       globalCachedEtaStore = {};
 
-      // 智能分流與去重過濾
-      Object.keys(PANEL_VIEW_CONFIG.tabs).forEach(k => {
-        PANEL_VIEW_CONFIG.tabs[k].routes.forEach(userRoute => {
-          const rawEtas = megaMergedList.filter(item => item.route === userRoute.route && item.eta);
+      keys.forEach(function(k) {
+        SMART_ENGINE_DB.tabs[k].routes.forEach(function(userRoute) {
+          const matchedRawEtas = megaMergedList.filter(function(item) {
+            return item.route === userRoute.route && item.eta;
+          });
           
           const uniqueEtas = [];
           const seenTimes = new Set();
-          rawEtas.forEach(item => {
+          matchedRawEtas.forEach(function(item) {
             if (!seenTimes.has(item.eta)) {
               seenTimes.add(item.eta);
               uniqueEtas.push(item);
             }
           });
 
-          uniqueEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+          uniqueEtas.sort(function(a, b) {
+            return new Date(a.eta) - new Date(b.eta);
+          });
           globalCachedEtaStore[userRoute.route] = uniqueEtas;
         });
       });
@@ -472,11 +412,11 @@
       renderActiveTabUI();
     }
 
-    // 6. 天文台與特別交通消息對接
     async function fetchLiveNewsAndWeather() {
-      const ts = Date.now();
+      const cacheBust = Date.now();
+      
       try {
-        const res = await fetch(`https://api.data.gov.hk/v1/transport/hk/tss/special-traffic-news?lang=tc&_=${ts}`);
+        const res = await fetch('https://api.data.gov.hk/v1/transport/hk/tss/special-traffic-news?lang=tc&_=' + cacheBust);
         if (res.ok) {
           const json = await res.json();
           DOM.trafficText.textContent = (json && json.length > 0) ? json[0].msgText : "現時交通大致正常。";
@@ -484,50 +424,65 @@
       } catch (e) {}
 
       try {
-        const wRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&_=${ts}`);
+        const wRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&_=' + cacheBust);
         if (wRes.ok) {
           const wData = await wRes.json();
-          if (wData.temperature?.data?.length > 0) {
-            const shatinTemp = wData.temperature.data.find(d => d.place === "沙田");
-            DOM.temp.textContent = shatinTemp ? `${shatinTemp.value}°C` : `${wData.temperature.data[0].value}°C`;
+          
+          if (wData && wData.temperature && wData.temperature.data && wData.temperature.data.length > 0) {
+            let shatinTemp = null;
+            for (let i = 0; i < wData.temperature.data.length; i++) {
+              if (wData.temperature.data[i].place === "沙田") {
+                shatinTemp = wData.temperature.data[i];
+                break;
+              }
+            }
+            DOM.temp.textContent = shatinTemp ? shatinTemp.value + "°C" : wData.temperature.data[0].value + "°C";
             DOM.location.textContent = shatinTemp ? "沙田區" : "香港";
           }
-          if (wData.humidity?.data?.length > 0) {
-            DOM.humidity.textContent = `相對濕度：${wData.humidity.data[0].value}%`;
+          if (wData && wData.humidity && wData.humidity.data && wData.humidity.data.length > 0) {
+            DOM.humidity.textContent = "相對濕度：" + wData.humidity.data[0].value + "%";
           }
-          if (wData.generalSituation) {
-            DOM.weatherSummary.innerHTML = `<strong>【今日天氣概況】</strong>${wData.generalSituation}`;
+          if (wData && wData.generalSituation) {
+            DOM.weatherSummary.innerHTML = "<strong>【今日天氣概況】</strong>" + wData.generalSituation;
           }
         }
 
-        const warnRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=${ts}`);
+        const warnRes = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=' + cacheBust);
         if (warnRes.ok) {
           const warnData = await warnRes.json();
           const keys = Object.keys(warnData);
-          DOM.warnings.textContent = keys.length > 0 ? ` ⚠️ 生效警告: ${keys.map(k => warnData[k].name).join(', ')}` : "";
+          if (keys.length > 0) {
+            let names = [];
+            for (let i = 0; i < keys.length; i++) { names.push(warnData[keys[i]].name); }
+            DOM.warnings.textContent = " ⚠️ 生效警告: " + names.join(', ');
+          } else {
+            DOM.warnings.textContent = "";
+          }
         }
       } catch (e) {}
     }
 
-    // 7. 啟動引導
     async function startEngine() {
-      setInterval(runLiveClock, 1000);
       runLiveClock();
+      setInterval(runLiveClock, 1000);
 
       renderActiveTabUI();
 
-      // 下載並掃描名冊（只有第一次需要 2 秒，以後秒開）
-      const success = await autoResolveStopMasterIds();
-      if (!success) return;
+      await fetchLiveNewsAndWeather();
+      await executeGlobalTransitPoll();
 
-      async function triggerPipeline() {
-        await Promise.allSettled([executeConcurrentTransitPoll(), fetchLiveNewsAndWeather()]);
-      }
-      setInterval(triggerPipeline, PANEL_VIEW_CONFIG.pollingIntervalMs);
-      triggerPipeline();
+      setInterval(async function() {
+        await fetchLiveNewsAndWeather();
+        await executeGlobalTransitPoll();
+      }, SMART_ENGINE_DB.pollingIntervalMs);
     }
 
-    document.addEventListener('DOMContentLoaded', startEngine);
+    // 解決部分舊 iOS WebKit 監聽 DOMContentLoaded 不發火的 Race Condition Bug
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      startEngine();
+    } else {
+      document.addEventListener('DOMContentLoaded', startEngine);
+    }
   </script>
 </body>
 </html>

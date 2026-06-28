@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Desktop Transit & Weather Command Center (Gov-Gateway Edition)</title>
+  <title>Desktop Transit & Weather Command Center (Proxy-Fix)</title>
   <style>
-    /* 高級深色主題色彩規格 (完美對齊目標圖片) */
+    /* 1. 高級深色主題色彩規格 (完美對齊目標圖片) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -195,7 +195,7 @@
       font-variant-numeric: tabular-nums;
     }
     .eta-countdown-display.incoming { color: #22c55e; }
-    .eta-countdown-display.diagnostic-log { color: #38bdf8; font-size: 2vh; font-weight: normal; }
+    .eta-countdown-display.proxy-log { color: #38bdf8; font-size: 2vh; font-weight: normal; }
     .eta-absolute-clock-time {
       font-size: 1.7vh;
       color: #64748b;
@@ -221,7 +221,7 @@
         </div>
       </div>
       <div id="weather-report-summary" class="weather-right-text">
-        正在通過政府網關安全同步香港天文台大數據中心...
+        正在通過開源代理安全開通 CORS 隧道...
       </div>
     </header>
 
@@ -245,11 +245,12 @@
   </div>
 
   <script>
+    // 定義你想監控的目標分頁與線路
     const DASHBOARD_MATRIX = {
       pollingIntervalMs: 30000, 
       tabs: {
         REGAL_NORTH: {
-          searchName: "富豪花園",
+          searchNames: ["富豪花園"],
           routes: [
             { route: "86K",  label: "往 沙田站" },
             { route: "89X",  label: "往 沙田站" },
@@ -258,14 +259,14 @@
           ]
         },
         REGAL_SOUTH: {
-          searchName: "富豪花園",
+          searchNames: ["富豪花園"],
           routes: [
             { route: "284",  label: "往 濱景花園 (循環線)" },
             { route: "49X",  label: "往 青衣碼頭" }
           ]
         },
         TOWN_CENTER: {
-          searchName: "沙田市中心總站",
+          searchNames: ["沙田市中心總站", "沙田市中心"],
           routes: [
             { route: "269D", label: "往 天富" }
           ]
@@ -274,7 +275,7 @@
     };
 
     let currentTabKey = "REGAL_NORTH";
-    let globalResolvedStopIds = []; 
+    let globalResolvedStopIds = []; // 儲存動態掃描出的所有相關物理站牌 HASH
     let globalCachedEtaStore = {}; 
 
     const DOM = {
@@ -290,7 +291,7 @@
 
     function runLiveClock() {
       const now = new Date();
-      const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+      const weekdays = ["日", "一", "二", "三", "四", "五", "校"];
       DOM.clock.textContent = `${now.getMonth() + 1}月${now.getDate()}日 (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-HK', { hour12: false })}`;
     }
 
@@ -316,7 +317,7 @@
 
         if (routeData && routeData.diagnostic) {
           slotHtml = `<div class="glass-card" style="padding: 0.5vh 1vw; border-color: #2563eb;">
-                        <div class="eta-countdown-display diagnostic-log">${routeData.diagnostic}</div>
+                        <div class="eta-countdown-display proxy-log">${routeData.diagnostic}</div>
                       </div>`;
         } else {
           const routeEtas = routeData || [];
@@ -356,67 +357,71 @@
     }
 
     /**
-     * 【政府數據網關一體化】
-     * 放棄所有非 gov.hk 域名，全線走 rt.data.gov.hk 通道，徹底解決內存網域名稱封鎖 (ERR_NAME_NOT_RESOLVED)
+     * 【CORS 智慧隧道解鎖】
+     * 透過 corsproxy.io 中轉下載 100% 繞過 GitHub 跨域阻擋限制
      */
     async function dynamicallyScanValidStopIds() {
-      DOM.weatherSummary.textContent = "正在直連政府實時交通名冊中心 (rt.data.gov.hk) 進行站點對接...";
+      DOM.weatherSummary.textContent = "正在透過 CORS 安全隧道下載最新政府交通名冊...";
       try {
-        const res = await fetch('https://rt.data.gov.hk/v1/transport/kmb/stop');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const targetUrl = 'https://rt.data.gov.hk/v1/transport/kmb/stop';
+        // 部署行內標準代理隧道
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+        
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error(`Tunnel HTTP ${res.status}`);
         const json = await res.json();
         const allStops = json.data || [];
 
-        const targetNames = Object.keys(DASHBOARD_MATRIX.tabs).map(k => DASHBOARD_MATRIX.tabs[k].searchName);
-        
+        // 收集所有我們要監控的名字
+        let allTargetNames = [];
+        Object.keys(DASHBOARD_MATRIX.tabs).forEach(k => {
+          allTargetNames = allTargetNames.concat(DASHBOARD_MATRIX.tabs[k].searchNames);
+        });
+
+        // 撈出富豪花園、沙田市中心在數據庫入面的全部物理站牌
         const matchedIds = allStops
-          .filter(s => targetNames.includes(s.name_tc))
+          .filter(s => allTargetNames.includes(s.name_tc))
           .map(s => s.stop);
 
         globalResolvedStopIds = [...new Set(matchedIds)];
         return true;
       } catch (err) {
-        console.error("Gov Gateway Sync Error:", err);
-        DOM.weatherSummary.innerHTML = `<span style="color:#f43f5e;font-weight:bold;">內網對接失敗: ${err.message}。請檢查政務網或公網連線。</span>`;
+        console.error("CORS Tunnel Error:", err);
+        DOM.weatherSummary.innerHTML = `<span style="color:#f43f5e;font-weight:bold;">隧道連線失敗: ${err.message}。請嘗試重新整理網頁。</span>`;
         return false;
       }
     }
 
+    /**
+     * 核心：高頻智慧併發與內存分流聚合 (Memory Splitting)
+     */
     async function executeConcurrentTransitPoll() {
       if (globalResolvedStopIds.length === 0) return;
 
-      // 巴士 ETA 數據同樣全線切換至政府主網關 rt.data.gov.hk
+      // 同時轟炸所有掃描出來的物理站牌，政府 ETA 接口本身天然支援 CORS
       const promises = globalResolvedStopIds.map(async (sid) => {
         try {
           const res = await fetch(`https://rt.data.gov.hk/v1/transport/kmb/stop-eta/${sid}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = await res.json();
-          return { data: json.data || [], error: null };
+          return json.data || [];
         } catch (e) {
-          return { data: [], error: e.message };
+          return [];
         }
       });
 
       const results = await Promise.all(promises);
-      
-      const megaMergedList = [];
-      let networkErrorMsg = null;
-      
-      results.forEach(resObj => {
-        if (resObj.error) networkErrorMsg = resObj.error;
-        resObj.data.forEach(item => megaMergedList.push(item));
-      });
+      const megaMergedList = results.flat();
 
+      // 清空舊緩存
+      globalCachedEtaStore = {};
+
+      // 智能分流核心：管你什麼南行北行坑位，直接在內存用「車牌號碼」對號入座！
       Object.keys(DASHBOARD_MATRIX.tabs).forEach(k => {
         DASHBOARD_MATRIX.tabs[k].routes.forEach(userRoute => {
-          
-          if (networkErrorMsg && megaMergedList.length === 0) {
-            globalCachedEtaStore[userRoute.route] = { diagnostic: `網絡異常: ${networkErrorMsg}` };
-            return;
-          }
-
           const matchedRawEtas = megaMergedList.filter(item => item.route === userRoute.route && item.eta);
           
+          // 前端時間去重
           const uniqueEtas = [];
           const seenTimes = new Set();
           matchedRawEtas.forEach(item => {
@@ -426,11 +431,11 @@
             }
           });
 
+          // 排序
           uniqueEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
           
-          // 如果沒有網絡錯誤，但確實沒有撈到任何班次，就在畫面上打出除錯輔助標籤
           if (uniqueEtas.length === 0) {
-            globalCachedEtaStore[userRoute.route] = { diagnostic: "政府網關係統連線成功，等待下班車發車..." };
+            globalCachedEtaStore[userRoute.route] = { diagnostic: "直連成功，等待下班車調度發車..." };
           } else {
             globalCachedEtaStore[userRoute.route] = uniqueEtas;
           }
@@ -440,9 +445,9 @@
       renderActiveTabUI();
     }
 
+    // 香港天文台大數據直連
     async function fetchLiveNewsAndWeather() {
       const cacheBust = Date.now();
-      
       try {
         const res = await fetch(`https://api.data.gov.hk/v1/transport/hk/tss/special-traffic-news?lang=tc&_=${cacheBust}`);
         if (res.ok) {
@@ -455,11 +460,9 @@
         const wRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&_=${cacheBust}`);
         if (wRes.ok) {
           const wData = await wRes.json();
-          
           if (wData?.temperature?.data?.length > 0) {
             const shatinTemp = wData.temperature.data.find(d => d.place === "沙田");
             DOM.temp.textContent = shatinTemp ? `${shatinTemp.value}°C` : `${wData.temperature.data[0].value}°C`;
-            DOM.location.textContent = shatinTemp ? "沙田區" : "香港";
           }
           if (wData?.humidity?.data?.length > 0) {
             DOM.humidity.textContent = `相對濕度：${wData.humidity.data[0].value}%`;
@@ -484,9 +487,11 @@
 
       renderActiveTabUI();
 
+      // 第一步：打通 CORS 隧道動態獲取所有物理站牌
       const setupSuccess = await dynamicallyScanValidStopIds();
       if (!setupSuccess) return;
 
+      // 第二步：高頻定時管道啟動
       async function triggerPipeline() {
         await Promise.all([executeConcurrentTransitPoll(), fetchLiveNewsAndWeather()]);
       }

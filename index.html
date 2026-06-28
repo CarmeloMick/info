@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All-in-One Transit & Weather Command Center (Official Station Sync)</title>
+  <title>All-in-One Transit & Weather Command Center</title>
   <style>
-    /* 全局高級深色主題色彩規格 (完美對齊目標大屏圖片) */
+    /* 全局高級深色主題色彩規格 (完美對齊目標截圖黑底質感) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -41,7 +41,7 @@
     .weather-card {
       display: flex;
       gap: 3vw;
-      height: 22vh;
+      height: 20vh;
     }
     .weather-left {
       flex: 1.2;
@@ -69,12 +69,12 @@
       margin-top: 0.5vh;
     }
     .big-temp {
-      font-size: 6.8vh;
+      font-size: 6.5vh;
       font-weight: bold;
       line-height: 1;
     }
     .weather-sub-metrics {
-      font-size: 1.9vh;
+      font-size: 1.8vh;
       color: #94a3b8;
       display: flex;
       flex-direction: column;
@@ -90,7 +90,7 @@
 
     /* 區塊二：特別交通消息組件 */
     .traffic-news-card {
-      height: 10vh;
+      height: 9vh;
       display: flex;
       align-items: center;
       gap: 1.5vw;
@@ -118,16 +118,15 @@
       text-overflow: ellipsis;
     }
 
-    /* 區塊三：實時巴士看板分區 */
+    /* 區塊三：實時智慧巴士看板 */
     .transit-card {
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 1.5vh;
       min-height: 0;
     }
 
-    /* 高級雙列 Grid 矩陣排版 (所有路線合體同屏展開) */
+    /* 高級雙列 Grid 矩陣排版 (全部 7 條路線同屏並排展開，絕不分頁) */
     .bus-grid-container {
       flex: 1;
       display: grid;
@@ -146,17 +145,17 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 10.5vh; /* 縮減卡片高度，確保 7 條線路同屏不滾動 */
+      height: 11vh; /* 固定卡片高度 */
     }
     .bus-info-meta { display: flex; flex-direction: column; }
     .route-badge-number {
-      font-size: 4.2vh;
+      font-size: 4.5vh;
       font-weight: 900;
       color: #eab308; 
       line-height: 1;
     }
     .route-destination-text {
-      font-size: 1.6vh;
+      font-size: 1.8vh;
       color: #64748b;
       margin-top: 0.4vh;
     }
@@ -169,14 +168,14 @@
       min-width: 8vw;
     }
     .eta-countdown-display {
-      font-size: 3.2vh;
+      font-size: 3.4vh;
       font-weight: bold;
       font-variant-numeric: tabular-nums;
     }
     .eta-countdown-display.incoming { color: #22c55e; }
     .eta-countdown-display.no-service { color: #475569; font-size: 2vh; font-weight: normal; }
     .eta-absolute-clock-time {
-      font-size: 1.6vh;
+      font-size: 1.7vh;
       color: #64748b;
       margin-top: 0.2vh;
       font-variant-numeric: tabular-nums;
@@ -187,6 +186,7 @@
 
   <div class="dashboard-container">
     
+    <!-- 區塊一：天氣連線卡片 -->
     <header class="glass-card weather-card">
       <div class="weather-left">
         <div id="live-clock-string" class="date-time-string">--月--日 (-) 00:00:00</div>
@@ -200,10 +200,11 @@
         </div>
       </div>
       <div id="weather-report-summary" class="weather-right-text">
-        正在啟動智能物理站柱精確校對引擎...
+        正在通過政府安全授權管道初始化巴士動態矩陣...
       </div>
     </header>
 
+    <!-- 區塊二：特別交通消息 -->
     <section class="glass-card traffic-news-card">
       <div class="traffic-icon">🚨</div>
       <div class="traffic-content-box">
@@ -212,27 +213,29 @@
       </div>
     </section>
 
+    <!-- 區塊三：全線同屏合體看板 -->
     <section class="glass-card transit-card">
       <div id="active-bus-rows-container" class="bus-grid-container">
-        </div>
+        <!-- 7 條線路會在此處並排生成 -->
+      </div>
     </section>
 
   </div>
 
   <script>
-    // 1. 嚴格對齊手機 App 截圖的 7 條路線及其來源物理柱位分組
+    // 1. 嚴格對齊手機 App 截圖的 7 條路線以及精確的目的地過濾詞
     const MONITOR_ROUTES_LIST = [
-      { route: "86K",  label: "往 沙田站 (ST511)",   group: "ST511" },
-      { route: "89X",  label: "往 沙田站 (ST511)",   group: "ST511" },
-      { route: "299X", label: "往 沙田市中心 (ST511)", group: "ST511" },
-      { route: "83K",  label: "往 沙田市中心 (ST511)", group: "ST511" },
-      { route: "284",  label: "往 濱景花園 (ST511)",   group: "ST511" },
-      { route: "49X",  label: "往 青衣碼頭 (ST512)",   group: "ST512" },
-      { route: "269D", label: "往 天富 (ST912)",       group: "ST912" }
+      { route: "86K",  label: "往 沙田站",       destFilter: "沙田" },
+      { route: "89X",  label: "往 沙田站",       destFilter: "沙田" },
+      { route: "299X", label: "往 沙田市中心",   destFilter: "沙田" },
+      { route: "83K",  label: "往 沙田市中心(循環線)", destFilter: "沙田" },
+      { route: "284",  label: "往 濱景花園(循環線)",   destFilter: "濱景" },
+      { route: "49X",  label: "往 青衣碼頭",     destFilter: "青衣" },
+      { route: "269D", label: "往 天富",         destFilter: "天富" }
     ];
 
-    const CACHE_KEY_STOPS = "DASHBOARD_STATION_PILLARS_V1";
-    let globalStops = { st511: null, st512: null, st912: null };
+    const CACHE_KEY_STOPS = "DASHBOARD_LIVE_STOPS_V8";
+    let globalResolvedStopIds = []; // 儲存動態篩選出嘅精確柱位 ID
     let globalCachedEtaStore = {}; 
 
     const DOM = {
@@ -299,123 +302,127 @@
     }
 
     /**
-     * 【智慧柱位解碼引擎】
-     * 透過路線名冊，動態反向推導出 ST511, ST512, ST912 精確的 16 位元加密政府 HASH ID
+     * 【智慧解鎖：輕量化站點採集技術】
+     * 完美避開 5MB 大檔案 CORS 封鎖！只下載 7 條路線專屬的 2KB 小名冊，全線綠色解鎖放行。
      */
-    async function resolveExactStopIds() {
+    async function resolveTargetStopIds() {
       const cached = localStorage.getItem(CACHE_KEY_STOPS);
       if (cached) {
         try {
-          globalStops = JSON.parse(cached);
-          if (globalStops.st511 && globalStops.st512 && globalStops.st912) return true;
+          globalResolvedStopIds = JSON.parse(cached);
+          if (globalResolvedStopIds.length > 0) return true;
         } catch(e) { localStorage.removeItem(CACHE_KEY_STOPS); }
       }
 
-      DOM.weatherSummary.textContent = "首次啟動：正在精確鎖定截圖中的 ST511、ST512、ST912 物理巴士站柱...";
+      DOM.weatherSummary.textContent = "首次啟動：正在安全校對目標線路物理站點 (約需 2 秒)...";
       try {
-        // 1. 下載基礎名冊對照表
-        const rStops = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop');
-        const dStops = await rStops.json();
-        const stopNameMap = new Map((dStops.data || []).map(s => [s.stop, s.name_tc]));
-
-        // 2. 透過 86K Outbound 鎖定 ST511 (富豪花園北行站)
-        const r86k = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/86K/outbound/1');
-        const d86k = await r86k.json();
-        let st511 = (d86k.data || []).map(s => s.stop).find(id => stopNameMap.get(id) === "富豪花園");
+        // 1. 收集這 7 條路線在上下行名冊中的所有站點 ID
+        let rawCandidateIds = [];
+        const bounds = ["outbound", "inbound"];
         
-        if (!st511) { // 防禦性雙向容錯
-          const r86kIn = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/86K/inbound/1');
-          const d86kIn = await r86kIn.json();
-          st511 = (d86kIn.data || []).map(s => s.stop).find(id => stopNameMap.get(id) === "富豪花園");
+        for (const r of MONITOR_ROUTES_LIST) {
+          for (const b of bounds) {
+            try {
+              const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${r.route}/${b}/1`);
+              if (res.ok) {
+                const json = await res.json();
+                (json.data || []).forEach(s => rawCandidateIds.push(s.stop));
+              }
+            } catch(e){}
+          }
         }
+        
+        const uniqueCandidates = [...new Set(rawCandidateIds)];
 
-        // 3. 透過 49X Outbound 鎖定 ST512 (富豪花園南行站 - 往青衣方向)
-        const r49x = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/49X/outbound/1');
-        const d49x = await r49x.json();
-        let st512 = (d49x.data || []).map(s => s.stop).find(id => stopNameMap.get(id) === "富豪花園" && id !== st511);
+        // 2. 併發下載這些特定站點的名稱詳情 (單個車站詳情 API 原生支援 CORS)
+        const stopNamesMap = {};
+        await Promise.all(uniqueCandidates.map(async (sid) => {
+          try {
+            const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${sid}`);
+            if (res.ok) {
+              const json = await res.json();
+              if (json.data && json.data.name_tc) {
+                stopNamesMap[sid] = json.data.name_tc;
+              }
+            }
+          } catch(e){}
+        }));
 
-        if (!st512) {
-          const r49xIn = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/49X/inbound/1');
-          const d49xIn = await r49xIn.json();
-          st512 = (d49xIn.data || []).map(s => s.stop).find(id => stopNameMap.get(id) === "富豪花園" && id !== st511);
-        }
-
-        // 4. 透過 269D Outbound 鎖定 ST912 (沙田市中心總站坑位)
-        const r269d = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/269D/outbound/1');
-        const d269d = await r269d.json();
-        let st912 = (d269d.data || []).map(s => s.stop).find(id => {
-          const name = stopNameMap.get(id) || "";
-          return name.includes("沙田市中心");
+        // 3. 過濾出所有名字叫「富豪花園」或者包含「沙田市中心」的精確物理加密 ID
+        const matchedIds = [];
+        uniqueCandidates.forEach(sid => {
+          const name = stopNamesMap[sid] || "";
+          if (name === "富豪花園" || name.includes("沙田市中心")) {
+            matchedIds.push(sid);
+          }
         });
 
-        if (!st912) {
-          const r269dIn = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/269D/inbound/1');
-          const d269dIn = await r269dIn.json();
-          st912 = (d269dIn.data || []).map(s => s.stop).find(id => {
-            const name = stopNameMap.get(id) || "";
-            return name.includes("沙田市中心");
-          });
-        }
+        globalResolvedStopIds = [...new Set(matchedIds)];
+        
+        if (globalResolvedStopIds.length === 0) throw new Error("No stops found");
 
-        if (st511 && st512 && st912) {
-          globalStops = { st511, st512, st912 };
-          localStorage.setItem(CACHE_KEY_STOPS, JSON.stringify(globalStops));
-          return true;
-        }
-        throw new Error("Pillar missing");
+        localStorage.setItem(CACHE_KEY_STOPS, JSON.stringify(globalResolvedStopIds));
+        return true;
       } catch (err) {
-        console.error("Resolution failed:", err);
-        DOM.weatherSummary.innerHTML = `<span style="color:#f43f5e;font-weight:bold;">站柱定位失敗，正在自動重試...</span>`;
+        console.error("Harvesting failed:", err);
+        DOM.weatherSummary.textContent = "系統初始化失敗，請重新整理網頁。";
         return false;
       }
     }
 
     /**
-     * 【精確柱位三管直連管道 + 走車秒級無痕退走】
+     * 【並發大數據管道 + dest_tc 目的地精準對號入座 + 走車秒級抹除】
      */
     async function executeConcurrentTransitPoll() {
-      if (!globalStops.st511 || !globalStops.st512 || !globalStops.st912) return;
+      if (globalResolvedStopIds.length === 0) return;
 
       const now = new Date();
 
-      // 唯獨精確直連這三個截圖指定的物理亭位，絕不交叉污染
-      const [res511, res512, res912] = await Promise.all([
-        fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${globalStops.st511}`).then(r => r.json()).catch(() => ({data:[]})),
-        fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${globalStops.st512}`).then(r => r.json()).catch(() => ({data:[]})),
-        fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${globalStops.st912}`).then(r => r.json()).catch(() => ({data:[]}))
-      ]);
+      // 同時向採集到嘅物理站點發送實時預報請求
+      const promises = globalResolvedStopIds.map(async (sid) => {
+        try {
+          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${sid}`);
+          if (res.ok) {
+            const json = await res.json();
+            return json.data || [];
+          }
+        } catch (e) {}
+        return [];
+      });
 
-      const data511 = res511.data || [];
-      const data512 = res512.data || [];
-      const data912 = res912.data || [];
+      const results = await Promise.all(promises);
+      const megaMergedList = results.flat();
 
       globalCachedEtaStore = {};
 
+      // 智能過濾分流：拋棄盲猜站位代碼，直接用「車號 + 目的地字眼」進行對號入座
       MONITOR_ROUTES_LIST.forEach(userRoute => {
-        let sourceData = [];
-        if (userRoute.group === "ST511") sourceData = data511;
-        else if (userRoute.group === "ST512") sourceData = data512;
-        else if (userRoute.group === "ST912") sourceData = data912;
+        const filteredRaw = megaMergedList.filter(item => {
+          if (item.route !== userRoute.route || !item.eta || !item.dest_tc) return false;
+          
+          // 精確比對目的地（例如 86K 目的地必須包含「沙田」）
+          if (!item.dest_tc.includes(userRoute.destFilter)) return false;
 
-        const matchedRawEtas = sourceData.filter(item => item.route === userRoute.route && item.eta);
-        
+          return true;
+        });
+
+        // 去重與走車退走機制
         const uniqueEtas = [];
         const seenTimes = new Set();
-        
-        matchedRawEtas.forEach(item => {
+
+        filteredRaw.forEach(item => {
           if (!seenTimes.has(item.eta)) {
             const targetTime = new Date(item.eta);
             
-            // 💡【秒級走車退走機制】
-            // 如果巴士到站時間已經過去超過 30 秒（例如已經開走 1 分鐘但官方 cache 未清），
-            // 前端直接將其抹除退走，保證畫面極速更新！
-            if (targetTime - now < -30000) return;
+            // 💡【秒級走車抹除】只要巴士預計到站時間早過當前時間，代表車已開走，立刻丟棄抹除！
+            if (targetTime - now < 0) return;
 
             seenTimes.add(item.eta);
             uniqueEtas.push(item);
           }
         });
 
+        // 依時間排序
         uniqueEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
         globalCachedEtaStore[userRoute.route] = uniqueEtas;
       });
@@ -423,6 +430,7 @@
       renderGlobalDashboardUI();
     }
 
+    // 香港天文台大數據直連
     async function fetchLiveNewsAndWeather() {
       const cacheBust = Date.now();
       try {
@@ -464,12 +472,11 @@
 
       renderGlobalDashboardUI();
 
-      const setupSuccess = await resolveExactStopIds();
-      if (!setupSuccess) {
-        setTimeout(startEngine, 2000); // 失敗則兩秒後重試
-        return;
-      }
+      // 第一步：動態採集路線物理 ID 避開 CORS 大名冊封鎖
+      const setupSuccess = await resolveTargetStopIds();
+      if (!setupSuccess) return;
 
+      // 第二步：啟動定時輪詢
       async function triggerPipeline() {
         await Promise.all([executeConcurrentTransitPoll(), fetchLiveNewsAndWeather()]);
       }

@@ -1,491 +1,1963 @@
 <!DOCTYPE html>
-<html lang="zh-Hant-HK">
+<html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All-in-One Transit & Weather Command Center</title>
-  <style>
-    /* 全局高級深色主題色彩規格 (完美對齊目標截圖黑底質感) */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    html, body {
-      background-color: #0b0f19; /* 極致深藍黑底色 */
-      color: #f1f5f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-      padding: 1.5vh 1.5vw;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="玄關資訊版">
+    <title>HOME HUB · 玄關智能資訊版</title>
 
-    .dashboard-container {
-      display: flex;
-      flex-direction: column;
-      height: 97vh;
-      gap: 1.5vh;
-    }
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-    /* 高級灰藍色面板卡片基底 */
-    .glass-card {
-      background-color: #131c2e; 
-      border: 1px solid #22314d;
-      border-radius: 16px;
-      padding: 2vh 2vw;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
+    <style>
+        :root {
+            /* Default: Dark Glass Studio Theme */
+            --bg-primary: #0b0f17;
+            --bg-gradient: radial-gradient(circle at 12% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%),
+                           radial-gradient(circle at 88% 85%, rgba(245, 158, 11, 0.10) 0%, transparent 45%),
+                           linear-gradient(160deg, #0b0f17 0%, #111827 100%);
+            --card-bg: rgba(24, 32, 48, 0.68);
+            --card-bg-hover: rgba(32, 43, 64, 0.82);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.15);
+            --surface-subtle: rgba(255, 255, 255, 0.04);
+            --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
 
-    /* 區塊一：頂部天氣面版 */
-    .weather-card {
-      display: flex;
-      gap: 3vw;
-      height: 20vh;
-    }
-    .weather-left {
-      flex: 1.2;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      border-right: 1px solid #22314d;
-      padding-right: 2vw;
-    }
-    .date-time-string {
-      font-size: 2vh;
-      color: #94a3b8;
-      margin-bottom: 0.5vh;
-      font-variant-numeric: tabular-nums;
-    }
-    .location-title {
-      font-size: 3vh;
-      font-weight: bold;
-      color: #38bdf8;
-    }
-    .temp-row {
-      display: flex;
-      align-items: center;
-      gap: 1.5vw;
-      margin-top: 0.5vh;
-    }
-    .big-temp {
-      font-size: 6.5vh;
-      font-weight: bold;
-      line-height: 1;
-    }
-    .weather-sub-metrics {
-      font-size: 1.8vh;
-      color: #94a3b8;
-      display: flex;
-      flex-direction: column;
-      gap: 0.3vh;
-    }
-    .weather-right-text {
-      flex: 2;
-      font-size: 1.9vh;
-      color: #cbd5e1;
-      line-height: 1.6;
-      overflow-y: auto;
-    }
+        [data-theme="japandi"] {
+            --bg-primary: #f3efe6;
+            --bg-gradient: radial-gradient(circle at 15% 15%, rgba(217, 119, 6, 0.08) 0%, transparent 50%),
+                           radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+                           linear-gradient(160deg, #f5f2eb 0%, #ebe5d8 100%);
+            --card-bg: rgba(255, 253, 249, 0.82);
+            --card-bg-hover: rgba(255, 253, 249, 0.96);
+            --card-border: rgba(120, 113, 108, 0.16);
+            --text-main: #292524;
+            --text-muted: #78716c;
+            --accent: #d97706;
+            --accent-soft: rgba(217, 119, 6, 0.12);
+            --surface-subtle: rgba(41, 37, 36, 0.045);
+            --shadow-card: 0 14px 32px -12px rgba(87, 83, 78, 0.12);
+        }
 
-    /* 區塊二：特別交通消息組件 */
-    .traffic-news-card {
-      height: 9vh;
-      display: flex;
-      align-items: center;
-      gap: 1.5vw;
-      background-color: #16223f;
-      border: 1px solid #2e4374;
-    }
-    .traffic-icon { font-size: 3.5vh; }
-    .traffic-content-box {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-    .traffic-title {
-      font-size: 2vh;
-      font-weight: bold;
-      color: #f43f5e; 
-      margin-bottom: 0.2vh;
-    }
-    .traffic-text-container {
-      font-size: 1.8vh;
-      color: #e2e8f0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+        [data-theme="swiss"] {
+            --bg-primary: #e8e8e3;
+            --bg-gradient: linear-gradient(180deg, #ecece7 0%, #e2e2dc 100%);
+            --card-bg: #f7f7f2;
+            --card-bg-hover: #ffffff;
+            --card-border: #18181b;
+            --text-main: #09090b;
+            --text-muted: #52525b;
+            --accent: #ea580c;
+            --accent-soft: rgba(234, 88, 12, 0.14);
+            --surface-subtle: rgba(24, 24, 27, 0.06);
+            --shadow-card: 4px 4px 0px #18181b;
+        }
 
-    /* 區塊三：實時智慧巴士看板 */
-    .transit-card {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    /* 高級雙列 Grid 矩陣排版 (全部 7 條路線同屏並排展開，絕不分頁) */
-    .bus-grid-container {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr); /* 完美平分左右兩列 */
-      gap: 1.2vh 1.5vw;
-      overflow-y: auto;
-      min-height: 0;
-      padding-right: 0.5vw;
-    }
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-primary);
+            background-image: var(--bg-gradient);
+            color: var(--text-main);
+            transition: background 0.35s ease, color 0.25s ease;
+            overflow-x: hidden;
+        }
 
-    .bus-data-row {
-      background-color: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 12px;
-      padding: 1.5vh 2vw;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 11vh; /* 固定卡片高度 */
-    }
-    .bus-info-meta { display: flex; flex-direction: column; }
-    .route-badge-number {
-      font-size: 4.5vh;
-      font-weight: 900;
-      color: #eab308; 
-      line-height: 1;
-    }
-    .route-destination-text {
-      font-size: 1.8vh;
-      color: #64748b;
-      margin-top: 0.4vh;
-    }
-    .arrival-slots-wrapper { display: flex; gap: 3vw; }
-    .eta-slot-item {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      justify-content: center;
-      min-width: 8vw;
-    }
-    .eta-countdown-display {
-      font-size: 3.4vh;
-      font-weight: bold;
-      font-variant-numeric: tabular-nums;
-    }
-    .eta-countdown-display.incoming { color: #22c55e; }
-    .eta-countdown-display.no-service { color: #475569; font-size: 2vh; font-weight: normal; }
-    .eta-absolute-clock-time {
-      font-size: 1.7vh;
-      color: #64748b;
-      margin-top: 0.2vh;
-      font-variant-numeric: tabular-nums;
-    }
-  </style>
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .bento-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow-card);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        [data-theme="swiss"] .bento-card {
+            border-width: 1.5px;
+        }
+
+        .surface-pill {
+            background: var(--surface-subtle);
+            border: 1px solid var(--card-border);
+        }
+
+        /* Custom subtle scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.25);
+            border-radius: 9999px;
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(0.96); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 2.4s infinite ease-in-out;
+        }
+
+        @keyframes pixel-shift {
+            0%   { transform: translate(0px, 0px); }
+            25%  { transform: translate(14px, -10px); }
+            50%  { transform: translate(-12px, 12px); }
+            75%  { transform: translate(10px, 8px); }
+            100% { transform: translate(0px, 0px); }
+        }
+        .burn-in-safe {
+            animation: pixel-shift 180s infinite ease-in-out;
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col select-none p-3 sm:p-4 lg:p-5 gap-3.5">
 
-  <div class="dashboard-container">
-    
-    <!-- 區塊一：天氣連線卡片 -->
-    <header class="glass-card weather-card">
-      <div class="weather-left">
-        <div id="live-clock-string" class="date-time-string">--月--日 (-) 00:00:00</div>
-        <div class="location-title" id="location-name-display">沙田區</div>
-        <div class="temp-row">
-          <div id="weather-temp-text" class="big-temp">--°C</div>
-          <div class="weather-sub-metrics">
-            <span id="weather-humidity-text">相對濕度：--%</span>
-            <span id="weather-warning-badges" style="color:#ef4444; font-weight:bold;"></span>
-          </div>
+    <header class="bento-card rounded-3xl px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <!-- Left: Clock & Date & Home Title -->
+        <div class="flex items-center gap-4 sm:gap-6">
+            <div class="flex items-baseline gap-1.5">
+                <span id="clock-hm" class="font-mono-num text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">10:40</span>
+                <span id="clock-sec" class="font-mono-num text-sm sm:text-base font-bold opacity-60">00</span>
+            </div>
+            <div class="h-8 w-[1px] bg-current opacity-15 hidden sm:block"></div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="date-display" class="text-sm sm:text-base font-bold tracking-wide">10月22日 星期四</span>
+                    <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        LIVE
+                    </span>
+                </div>
+                <button onclick="openTitleModal()" class="text-xs opacity-65 hover:opacity-100 flex items-center gap-1 mt-0.5 transition">
+                    <i data-lucide="home" class="w-3 h-3"></i>
+                    <span id="hub-title-text">玄關智能資訊版 · ENTRYWAY HUB</span>
+                    <i data-lucide="edit-3" class="w-2.5 h-2.5 opacity-60"></i>
+                </button>
+            </div>
         </div>
-      </div>
-      <div id="weather-report-summary" class="weather-right-text">
-        正在通過政府安全授權管道初始化巴士動態矩陣...
-      </div>
+
+        <!-- Center: Out-the-door Quick Checklist ("出門前提示") -->
+        <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full py-0.5" id="door-checklist-bar">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Right: Theme Switcher, Night Dimmer, Kiosk Guide -->
+        <div class="flex items-center gap-2 ml-auto sm:ml-0">
+            <!-- Cantonese Voice Briefing Button (For tying shoes at entryway) -->
+            <button onclick="speakEntrywayBriefing()" id="voice-brief-btn" class="px-3 py-2 rounded-2xl text-xs font-extrabold bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 flex items-center gap-1.5 transition" title="著緊鞋唔得閒睇？一鍵廣東話語音播報天氣同巴士時間">
+                <i data-lucide="volume-2" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">著鞋語音報時</span>
+            </button>
+
+            <!-- Theme Selector -->
+            <div class="surface-pill rounded-2xl p-1 flex items-center gap-1">
+                <button onclick="setTheme('dark')" id="theme-btn-dark" title="極簡暗黑毛玻璃" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1">
+                    <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+                    <span class="hidden xl:inline">暗黑</span>
+                </button>
+                <button onclick="setTheme('japandi')" id="theme-btn-japandi" title="北歐木質奶油風" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1">
+                    <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                    <span class="hidden xl:inline">木質</span>
+                </button>
+                <button onclick="setTheme('swiss')" id="theme-btn-swiss" title="瑞士雜誌高對比風" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1">
+                    <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                    <span class="hidden xl:inline">雜誌</span>
+                </button>
+            </div>
+
+            <!-- Night Standby / Dimmer Toggle -->
+            <button onclick="toggleNightStandby()" class="surface-pill hover:opacity-80 p-2.5 rounded-2xl transition" title="夜間低光待機模式">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Fullscreen / Publish & iPad Setup Guide -->
+            <button onclick="openIpadGuideModal()" class="px-3 py-2 rounded-2xl text-xs font-extrabold bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 border border-sky-500/30 flex items-center gap-1.5 transition">
+                <i data-lucide="rocket" class="w-4 h-4 text-sky-400"></i>
+                <span class="hidden md:inline">正式發佈 / iPad 設定</span>
+            </button>
+        </div>
     </header>
 
-    <!-- 區塊二：特別交通消息 -->
-    <section class="glass-card traffic-news-card">
-      <div class="traffic-icon">🚨</div>
-      <div class="traffic-content-box">
-        <div class="traffic-title">特別交通消息</div>
-        <div id="traffic-news-container-text" class="traffic-text-container">現時交通大致正常。</div>
-      </div>
-    </section>
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-h-0">
 
-    <!-- 區塊三：全線同屏合體看板 -->
-    <section class="glass-card transit-card">
-      <div id="active-bus-rows-container" class="bus-grid-container">
-        <!-- 7 條線路會在此處並排生成 -->
-      </div>
-    </section>
-
-  </div>
-
-  <script>
-    // 1. 嚴格對齊手機 App 截圖的 7 條路線以及精確的目的地過濾詞
-    const MONITOR_ROUTES_LIST = [
-      { route: "86K",  label: "往 沙田站",       destFilter: "沙田" },
-      { route: "89X",  label: "往 沙田站",       destFilter: "沙田" },
-      { route: "299X", label: "往 沙田市中心",   destFilter: "沙田" },
-      { route: "83K",  label: "往 沙田市中心(循環線)", destFilter: "沙田" },
-      { route: "284",  label: "往 濱景花園(循環線)",   destFilter: "濱景" },
-      { route: "49X",  label: "往 青衣碼頭",     destFilter: "青衣" },
-      { route: "269D", label: "往 天富",         destFilter: "天富" }
-    ];
-
-    const CACHE_KEY_STOPS = "DASHBOARD_LIVE_STOPS_V8";
-    let globalResolvedStopIds = []; // 儲存動態篩選出嘅精確柱位 ID
-    let globalCachedEtaStore = {}; 
-
-    const DOM = {
-      clock: document.getElementById('live-clock-string'),
-      location: document.getElementById('location-name-display'),
-      temp: document.getElementById('weather-temp-text'),
-      humidity: document.getElementById('weather-humidity-text'),
-      warnings: document.getElementById('weather-warning-badges'),
-      weatherSummary: document.getElementById('weather-report-summary'),
-      trafficText: document.getElementById('traffic-news-container-text'),
-      busContainer: document.getElementById('active-bus-rows-container')
-    };
-
-    function runLiveClock() {
-      const now = new Date();
-      const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-      DOM.clock.textContent = `${now.getMonth() + 1}月${now.getDate()}日 (${weekdays[now.getDay()]}) ${now.toLocaleTimeString('zh-HK', { hour12: false })}`;
-    }
-
-    function renderGlobalDashboardUI() {
-      DOM.busContainer.innerHTML = '';
-      const now = new Date();
-
-      MONITOR_ROUTES_LIST.forEach((r) => {
-        const row = document.createElement('div');
-        row.className = 'bus-data-row';
-        const routeEtas = globalCachedEtaStore[r.route] || [];
-
-        let slotHtml = '';
-        for (let seq = 0; seq < 2; seq++) {
-          if (routeEtas[seq]) {
-            const data = routeEtas[seq];
-            const targetTime = new Date(data.eta);
-            const diffMins = Math.floor((targetTime - now) / 60000);
+        <!-- COLUMN 1: Weather & Family Memo (3.5 -> 4 cols on 12-col grid) -->
+        <section class="lg:col-span-4 flex flex-col gap-3.5 min-h-0">
             
-            const absHour = String(targetTime.getHours()).padStart(2, '0');
-            const absMin = String(targetTime.getMinutes()).padStart(2, '0');
-            
-            const isIncoming = diffMins <= 0;
-            const timeStr = isIncoming ? "即將抵達" : `${diffMins} 分鐘`;
-            
-            slotHtml += `
-              <div class="eta-slot-item">
-                <div class="eta-countdown-display ${isIncoming ? 'incoming' : ''}">${timeStr}</div>
-                <div class="eta-absolute-clock-time">${absHour}:${absMin} ${data.rmk_tc || ''}</div>
-              </div>`;
-          } else {
-            slotHtml += `
-              <div class="eta-slot-item">
-                <div class="eta-countdown-display no-service">${seq === 0 ? '暫無班次' : '--'}</div>
-                <div class="eta-absolute-clock-time"></div>
-              </div>`;
-          }
-        }
+            <!-- Weather Card -->
+            <div class="bento-card rounded-3xl p-5 flex flex-col justify-between relative overflow-hidden shrink-0">
+                <!-- Top row: District selector & HKO status -->
+                <div class="flex items-center justify-between gap-2 z-10">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-sky-400"></i>
+                        <select id="district-select" onchange="changeWeatherDistrict(this.value)" class="bg-transparent font-bold text-sm sm:text-base focus:outline-none cursor-pointer pr-1">
+                            <option value="香港天文台" class="bg-slate-900 text-white">香港天文台</option>
+                            <option value="沙田" class="bg-slate-900 text-white">沙田</option>
+                            <option value="大埔" class="bg-slate-900 text-white">大埔</option>
+                            <option value="將軍澳" class="bg-slate-900 text-white">將軍澳</option>
+                            <option value="荃灣可觀" class="bg-slate-900 text-white">荃灣</option>
+                            <option value="屯門" class="bg-slate-900 text-white">屯門</option>
+                            <option value="元朗公園" class="bg-slate-900 text-white">元朗</option>
+                            <option value="觀塘" class="bg-slate-900 text-white">觀塘</option>
+                            <option value="深水埗" class="bg-slate-900 text-white">深水埗</option>
+                            <option value="九龍城" class="bg-slate-900 text-white">九龍城</option>
+                            <option value="跑馬地" class="bg-slate-900 text-white">銅鑼灣 / 跑馬地</option>
+                            <option value="黃竹坑" class="bg-slate-900 text-white">南區 / 黃竹坑</option>
+                        </select>
+                    </div>
+                    <button onclick="fetchWeatherData(true)" class="text-xs opacity-60 hover:opacity-100 flex items-center gap-1 transition" title="更新香港天文台數據">
+                        <span id="weather-source-badge">香港天文台實時</span>
+                        <i data-lucide="refresh-cw" id="weather-refresh-icon" class="w-3 h-3"></i>
+                    </button>
+                </div>
 
-        row.innerHTML = `
-          <div class="bus-info-meta">
-            <div class="route-badge-number">${r.route}</div>
-            <div class="route-destination-text">${r.label}</div>
-          </div>
-          <div class="arrival-slots-wrapper">${slotHtml}</div>`;
-        DOM.busContainer.appendChild(row);
-      });
-    }
+                <!-- Active HKO Warnings Banner -->
+                <div id="weather-warnings-bar" class="mt-2.5 flex flex-wrap gap-1.5 z-10 empty:hidden"></div>
 
-    /**
-     * 【智慧解鎖：輕量化站點採集技術】
-     * 完美避開 5MB 大檔案 CORS 封鎖！只下載 7 條路線專屬的 2KB 小名冊，全線綠色解鎖放行。
-     */
-    async function resolveTargetStopIds() {
-      const cached = localStorage.getItem(CACHE_KEY_STOPS);
-      if (cached) {
-        try {
-          globalResolvedStopIds = JSON.parse(cached);
-          if (globalResolvedStopIds.length > 0) return true;
-        } catch(e) { localStorage.removeItem(CACHE_KEY_STOPS); }
-      }
+                <!-- Main Temperature & Advice -->
+                <div class="my-3.5 flex items-center justify-between gap-4 z-10">
+                    <div>
+                        <div class="flex items-start">
+                            <span id="weather-temp" class="font-mono-num text-5xl sm:text-6xl font-extrabold tracking-tighter">26</span>
+                            <span class="text-2xl font-bold mt-1">°C</span>
+                        </div>
+                        <p id="weather-desc" class="text-sm font-semibold mt-1 opacity-90">部分時間有陽光 · 乾燥</p>
+                        <div id="weather-umbrella-tip" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-sky-500/15 text-sky-400 border border-sky-500/25">
+                            <i data-lucide="sun-medium" class="w-3.5 h-3.5"></i>
+                            <span>出門指數：天色良好，不用帶遮</span>
+                        </div>
+                    </div>
+                    <div id="weather-hero-icon" class="w-20 h-20 rounded-3xl surface-pill flex items-center justify-center shrink-0">
+                        <i data-lucide="cloud-sun" class="w-11 h-11 text-amber-400"></i>
+                    </div>
+                </div>
 
-      DOM.weatherSummary.textContent = "首次啟動：正在安全校對目標線路物理站點 (約需 2 秒)...";
-      try {
-        // 1. 收集這 7 條路線在上下行名冊中的所有站點 ID
-        let rawCandidateIds = [];
-        const bounds = ["outbound", "inbound"];
-        
-        for (const r of MONITOR_ROUTES_LIST) {
-          for (const b of bounds) {
-            try {
-              const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${r.route}/${b}/1`);
-              if (res.ok) {
-                const json = await res.json();
-                (json.data || []).forEach(s => rawCandidateIds.push(s.stop));
-              }
-            } catch(e){}
-          }
-        }
-        
-        const uniqueCandidates = [...new Set(rawCandidateIds)];
+                <!-- Metrics Strip (Humidity, UV, Temp Range) -->
+                <div class="grid grid-cols-3 gap-2 pt-3 border-t border-current/10 text-xs z-10">
+                    <div class="surface-pill rounded-2xl p-2.5 flex flex-col">
+                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="droplets" class="w-3 h-3 text-sky-400"></i>相對濕度</span>
+                        <span id="weather-humidity" class="font-mono-num text-base font-bold mt-0.5">68%</span>
+                    </div>
+                    <div class="surface-pill rounded-2xl p-2.5 flex flex-col">
+                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="thermometer" class="w-3 h-3 text-rose-400"></i>今日高低</span>
+                        <span id="weather-range" class="font-mono-num text-base font-bold mt-0.5">23° / 28°</span>
+                    </div>
+                    <div class="surface-pill rounded-2xl p-2.5 flex flex-col">
+                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="flame" class="w-3 h-3 text-amber-400"></i>紫外線指數</span>
+                        <span id="weather-uv" class="font-mono-num text-base font-bold mt-0.5">5 (中)</span>
+                    </div>
+                </div>
 
-        // 2. 併發下載這些特定站點的名稱詳情 (單個車站詳情 API 原生支援 CORS)
-        const stopNamesMap = {};
-        await Promise.all(uniqueCandidates.map(async (sid) => {
-          try {
-            const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${sid}`);
-            if (res.ok) {
-              const json = await res.json();
-              if (json.data && json.data.name_tc) {
-                stopNamesMap[sid] = json.data.name_tc;
-              }
+                <!-- 5-Day Mini Forecast -->
+                <div id="weather-forecast-row" class="grid grid-cols-5 gap-1.5 mt-3 pt-3 border-t border-current/10 text-center z-10">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Family Sticky Note / Entryway Memo Card -->
+            <div class="bento-card rounded-3xl p-5 flex-1 flex flex-col justify-between min-h-[170px]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                            <i data-lucide="message-square-heart" class="w-4 h-4"></i>
+                        </span>
+                        <div>
+                            <h2 class="text-sm font-bold tracking-wide">玄關留言板 · FAMILY MEMO</h2>
+                        </div>
+                    </div>
+                    <span id="memo-saved-hint" class="text-[11px] opacity-50">點擊文字直接修改</span>
+                </div>
+
+                <textarea id="family-memo-input" oninput="saveFamilyMemo(this.value)" rows="3"
+                    class="w-full flex-1 mt-3 bg-transparent resize-none focus:outline-none text-sm sm:text-base font-medium leading-relaxed placeholder:opacity-40"
+                    placeholder="輸入給屋企人或自己出門前的提醒..."></textarea>
+
+                <div class="flex items-center justify-between pt-2.5 border-t border-current/10 text-xs opacity-75">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="wifi" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>玄關資訊版連線正常</span>
+                    </div>
+                    <button onclick="cycleQuickMemoPreset()" class="hover:underline flex items-center gap-1 text-amber-400 font-semibold">
+                        <i data-lucide="wand-2" class="w-3 h-3"></i>換句溫馨提示
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-4 bento-card rounded-3xl p-5 flex flex-col min-h-[420px] lg:min-h-0">
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2 pb-3.5 border-b border-current/10 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                        <i data-lucide="bus" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base sm:text-lg font-extrabold tracking-tight">巴士 · 小巴到站時間</h2>
+                        </div>
+                        <div class="text-xs flex items-center gap-1.5 mt-0.5">
+                            <button onclick="cycleWalkBuffer()" class="px-2 py-0.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30 font-bold hover:bg-sky-500/25 transition flex items-center gap-1" title="點擊更改由屋企出門、等𨋢到行去車站所需時間">
+                                <i data-lucide="footprints" class="w-3 h-3"></i>
+                                <span>連等𨋢步程：<span id="walk-buffer-label">4</span>分鐘</span>
+                            </button>
+                            <span class="opacity-50">·</span>
+                            <span id="eta-last-updated" class="opacity-60">剛剛更新</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="refreshAllTransportETAs(true)" class="surface-pill p-2 rounded-xl hover:opacity-80 transition" title="立即刷新到站時間">
+                        <i data-lucide="rotate-cw" id="eta-refresh-icon" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="openRouteManagerModal()" class="px-3 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1 transition shadow-sm">
+                        <i data-lucide="SlidersHorizontal" class="w-3.5 h-3.5"></i>
+                        <span>揀路線</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Pills -->
+            <div class="flex items-center justify-between gap-2 my-3 shrink-0">
+                <div class="flex items-center gap-1.5">
+                    <button onclick="setTransportFilter('ALL')" id="filter-trans-ALL" class="px-3 py-1 rounded-xl text-xs font-bold transition">全部</button>
+                    <button onclick="setTransportFilter('BUS')" id="filter-trans-BUS" class="px-3 py-1 rounded-xl text-xs font-bold transition">巴士 (九巴/城巴)</button>
+                    <button onclick="setTransportFilter('MINIBUS')" id="filter-trans-MINIBUS" class="px-3 py-1 rounded-xl text-xs font-bold transition">專線小巴 / 邨巴</button>
+                </div>
+                <span class="text-[11px] opacity-55 hidden sm:inline">橙燈 = 5分鐘內</span>
+            </div>
+
+            <!-- ETA Cards List -->
+            <div id="transport-eta-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <section class="lg:col-span-4 bento-card rounded-3xl p-5 flex flex-col min-h-[420px] lg:min-h-0">
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2 pb-3.5 border-b border-current/10 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-2xl bg-violet-500/20 text-violet-400 flex items-center justify-center">
+                        <i data-lucide="calendar-check-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-extrabold tracking-tight">本週重要事項</h2>
+                        <p id="week-range-label" class="text-xs opacity-60">本週日程與重要提醒</p>
+                    </div>
+                </div>
+
+                <button onclick="openEventModal()" class="px-3 py-2 rounded-xl text-xs font-bold bg-violet-500 hover:bg-violet-400 text-white flex items-center gap-1 transition shadow-sm">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>新增事項</span>
+                </button>
+            </div>
+
+            <!-- 7-Day Interactive Strip (Mon - Sun + All Week) -->
+            <div class="my-3 shrink-0">
+                <div class="grid grid-cols-8 gap-1" id="weekly-day-strip">
+                    <!-- Populated by JS: '全週' + Mon to Sun -->
+                </div>
+            </div>
+
+            <!-- Events List -->
+            <div id="weekly-events-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Footer summary -->
+            <div class="pt-3 mt-2 border-t border-current/10 flex items-center justify-between text-xs opacity-65 shrink-0">
+                <span id="weekly-progress-text">本週已完成 0 / 0 項</span>
+                <button onclick="clearCompletedEvents()" class="hover:underline hover:opacity-100">清除已完成項目</button>
+            </div>
+        </section>
+    </main>
+
+    <div id="route-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bento-card rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-white/15">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-current/10 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="bus-front" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="text-lg font-extrabold">自訂玄關巴士 · 小巴路線</h3>
+                </div>
+                <button onclick="closeRouteManagerModal()" class="surface-pill p-2 rounded-xl hover:opacity-80">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-5 overflow-y-auto space-y-5 flex-1">
+                <!-- Mode Switch Tabs -->
+                <div class="grid grid-cols-2 gap-2 surface-pill p-1.5 rounded-2xl">
+                    <button onclick="switchRouteAddTab('LIVE_KMB')" id="tab-route-live" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition bg-sky-500 text-slate-950">
+                        📡 香港實時資料庫搜尋 (九巴/小巴)
+                    </button>
+                    <button onclick="switchRouteAddTab('CUSTOM')" id="tab-route-custom" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition opacity-70">
+                        ✍️ 手動新增 (任何巴士/綠Van/紅Van/邨巴)
+                    </button>
+                </div>
+
+                <!-- Tab 1: Live API Route Lookup -->
+                <div id="panel-route-live" class="surface-pill rounded-2xl p-4 space-y-3">
+                    <div class="flex flex-wrap sm:flex-nowrap items-end gap-2">
+                        <div class="w-full sm:w-40">
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">交通工具</label>
+                            <select id="live-operator-select" onchange="onLiveOperatorChange()" class="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 text-white border border-white/15 text-sm font-bold">
+                                <option value="KMB">九巴 (KMB 實時)</option>
+                                <option value="CTB">城巴 (Citybus 實時)</option>
+                                <option value="GMB_NT">新界綠Van (專線小巴)</option>
+                                <option value="GMB_KLN">九龍綠Van (專線小巴)</option>
+                                <option value="GMB_HKI">港島綠Van (專線小巴)</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">輸入路線號碼 (例如：89D, 968, A11, 803)</label>
+                            <input type="text" id="live-route-input" placeholder="例如：89D, 968, E22"
+                                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 text-white border border-white/15 text-sm font-bold uppercase focus:outline-none focus:border-sky-400">
+                        </div>
+                        <button onclick="searchLiveRouteStops()" id="live-search-btn" class="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm flex items-center gap-1.5 shrink-0">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                            <span>搜尋車站</span>
+                        </button>
+                    </div>
+
+                    <div id="live-search-results" class="hidden space-y-2.5 pt-2 border-t border-current/10">
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">選擇往返方向</label>
+                            <select id="live-direction-select" onchange="loadLiveStopsForDirection()" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-semibold"></select>
+                        </div>
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">選擇你屋企樓下／附近的車站</label>
+                            <select id="live-stop-select" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-semibold"></select>
+                        </div>
+                        <button onclick="addSelectedLiveRoute()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>加入玄關看板 (實時連線)</span>
+                        </button>
+                    </div>
+                    <p id="live-search-status" class="text-xs opacity-65">💡 直接連線政府數據一線通 (data.gov.hk) 獲取九巴及專線小巴實時預計到站時間。</p>
+                </div>
+
+                <!-- Tab 2: Manual / Custom Route Builder -->
+                <div id="panel-route-custom" class="surface-pill rounded-2xl p-4 space-y-3 hidden">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">類別</label>
+                            <select id="custom-op" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-bold">
+                                <option value="KMB">九巴 KMB</option>
+                                <option value="CTB">城巴 Citybus</option>
+                                <option value="GMB">專線小巴 (綠Van)</option>
+                                <option value="RMB">公共小巴 (紅Van)</option>
+                                <option value="NR">屋苑邨巴 / 接駁車</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">路線號碼</label>
+                            <input type="text" id="custom-route" placeholder="例: 28K / NR88" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-bold uppercase">
+                        </div>
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">平均班次 (分鐘)</label>
+                            <input type="number" id="custom-freq" value="8" min="2" max="60" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-bold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">開往目的地</label>
+                            <input type="text" id="custom-dest" placeholder="例: 沙田市中心 / 中環交易廣場" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs opacity-70 block mb-1 font-semibold">上車站名</label>
+                            <input type="text" id="custom-stop" placeholder="例: 第一城中心 / 屋苑大閘口" class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-sm">
+                        </div>
+                    </div>
+                    <button onclick="addCustomRoute()" class="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-1.5">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>新增自訂路線到玄關版</span>
+                    </button>
+                </div>
+
+                <!-- Current Saved Routes List -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider opacity-65">已釘選在玄關的路線 (<span id="saved-route-count">0</span>)</h4>
+                        <button onclick="resetDefaultRoutes()" class="text-xs text-sky-400 hover:underline">還原預設範例</button>
+                    </div>
+                    <div id="modal-saved-routes-list" class="space-y-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="event-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bento-card rounded-3xl w-full max-w-md overflow-hidden border border-white/15">
+            <div class="p-5 border-b border-current/10 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-violet-400"></i>
+                    <h3 class="text-lg font-extrabold">新增本週重要事項</h3>
+                </div>
+                <button onclick="closeEventModal()" class="surface-pill p-2 rounded-xl">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-3.5">
+                <div>
+                    <label class="text-xs opacity-70 block mb-1 font-semibold">事項內容</label>
+                    <input type="text" id="event-title-input" placeholder="例如：交差餉電費、阿女鋼琴班、約順豐收件"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-medium focus:outline-none focus:border-violet-400">
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="text-xs opacity-70 block mb-1 font-semibold">星期幾</label>
+                        <select id="event-day-input" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-bold">
+                            <option value="1">星期一 (Mon)</option>
+                            <option value="2">星期二 (Tue)</option>
+                            <option value="3">星期三 (Wed)</option>
+                            <option value="4">星期四 (Thu)</option>
+                            <option value="5">星期五 (Fri)</option>
+                            <option value="6">星期六 (Sat)</option>
+                            <option value="0">星期日 (Sun)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs opacity-70 block mb-1 font-semibold">時間 (選填)</label>
+                        <input type="time" id="event-time-input" value="10:00"
+                            class="w-full px-3 py-2.5 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-mono-num">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs opacity-70 block mb-1 font-semibold">分類標籤</label>
+                    <div class="grid grid-cols-4 gap-2" id="event-tag-selector">
+                        <button type="button" onclick="selectEventTag('重要')" data-tag="重要" class="event-tag-btn py-2 rounded-xl text-xs font-bold border border-rose-500/40 bg-rose-500/20 text-rose-300">🔥 重要</button>
+                        <button type="button" onclick="selectEventTag('屋企')" data-tag="屋企" class="event-tag-btn py-2 rounded-xl text-xs font-bold border border-white/10 opacity-60">🏠 屋企</button>
+                        <button type="button" onclick="selectEventTag('繳費')" data-tag="繳費" class="event-tag-btn py-2 rounded-xl text-xs font-bold border border-white/10 opacity-60">💳 繳費</button>
+                        <button type="button" onclick="selectEventTag('聚會')" data-tag="聚會" class="event-tag-btn py-2 rounded-xl text-xs font-bold border border-white/10 opacity-60">🍽️ 聚會</button>
+                    </div>
+                </div>
+                <button onclick="saveNewWeeklyEvent()" class="w-full py-3 rounded-xl bg-violet-500 hover:bg-violet-400 text-white font-extrabold text-sm mt-2 transition">
+                    儲存事項到本週清單
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ipad-guide-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bento-card rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-white/15">
+            <div class="p-5 border-b border-current/10 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="rocket" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="text-lg font-extrabold">正式發佈網頁 & 閒置 iPad 玄關部署教學</h3>
+                </div>
+                <button onclick="closeIpadGuideModal()" class="surface-pill p-2 rounded-xl hover:opacity-80">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 text-sm leading-relaxed flex-1">
+                <!-- Step 1: Download Standalone HTML with baked-in settings -->
+                <div class="surface-pill rounded-2xl p-4 space-y-3 border border-sky-500/30">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="font-extrabold text-sky-400 text-sm sm:text-base flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-sky-500 text-slate-950 text-xs font-extrabold flex items-center justify-center">1</span>
+                            <span>先喺呢度揀好路線，一鍵匯出專屬 `index.html`</span>
+                        </div>
+                        <span class="text-[11px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-bold">單一檔案 · 免伺服器後端</span>
+                    </div>
+                    <p class="opacity-80 text-xs">你可以先喺目前畫面揀好晒屋企樓下嘅巴士／小巴路線、地區天氣同標題，然後撳下面粒掣下載 `index.html`。下載嘅檔案會<strong>自動內置你剛才設定好嘅所有路線</strong>，放上 iPad 打開即刻用得，唔使喺 iPad 重新輸入！</p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <button onclick="downloadStandaloneHTML()" class="flex-1 min-w-[200px] py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>下載完整 index.html (連目前路線設定)</span>
+                        </button>
+                        <button onclick="copyConfigSyncCode()" class="py-2.5 px-3.5 rounded-xl surface-pill hover:opacity-90 font-bold text-xs flex items-center gap-1.5 transition" title="複製目前設定碼，方便日後貼落 iPad 同步">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <span>複製設定碼</span>
+                        </button>
+                        <button onclick="toggleImportConfigBox()" class="py-2.5 px-3.5 rounded-xl surface-pill hover:opacity-90 font-bold text-xs flex items-center gap-1.5 transition">
+                            <i data-lucide="Upload" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            <span>匯入設定碼</span>
+                        </button>
+                    </div>
+                    <!-- Optional Import Config Box -->
+                    <div id="import-config-box" class="hidden pt-2 border-t border-current/10 space-y-2">
+                        <input type="text" id="import-config-input" placeholder="貼上喺電腦複製嘅設定碼..." class="w-full px-3 py-2 rounded-xl bg-slate-900 text-white border border-white/15 text-xs font-mono">
+                        <button onclick="applyImportedConfig()" class="w-full py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">確認載入設定</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Free HTTPS Hosting so iPad can Add to Home Screen -->
+                <div class="surface-pill rounded-2xl p-4 space-y-2.5">
+                    <div class="font-extrabold text-amber-400 text-sm sm:text-base flex items-center gap-1.5">
+                        <span class="w-5 h-5 rounded-full bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center justify-center">2</span>
+                        <span>30秒免費發佈上網（拎專屬 `https://` 網址）</span>
+                    </div>
+                    <p class="opacity-80 text-xs">因為 Apple iPadOS 規定必須係 `https://` 網址先可以用<strong>「加入主畫面」全螢幕無邊框模式</strong>同埋連線香港天文台／巴士 API，以下 2 個免費方法任揀一個：</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                        <div class="p-3 rounded-xl bg-black/20 border border-white/10 space-y-1">
+                            <div class="font-bold text-xs text-sky-300">⚡ 方法 A：Netlify Drop（最簡單免技術）</div>
+                            <p class="text-[11px] opacity-75">1. 喺電腦將下載嘅 `index.html` 放入一個新資料夾。<br>2. 去 <strong>app.netlify.com/drop</strong> 或 <strong>tiiny.host</strong>。<br>3. 將個資料夾直接「拖拉」落網頁，即刻免費獲得專屬網址！</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-black/20 border border-white/10 space-y-1">
+                            <div class="font-bold text-xs text-emerald-300">🔒 方法 B：GitHub Pages（永久免費穩定）</div>
+                            <p class="text-[11px] opacity-75">1. 註冊 GitHub 並開一個新 Repository。<br>2. 上載 `index.html` 檔案。<br>3. 去 Settings ➔ Pages 揀 `main` branch，即有永久網址 `你的名.github.io/repo`。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: iPad Safari Add to Home Screen & Guided Access -->
+                <div class="surface-pill rounded-2xl p-4 space-y-2">
+                    <div class="font-extrabold text-emerald-400 text-sm sm:text-base flex items-center gap-1.5">
+                        <span class="w-5 h-5 rounded-full bg-emerald-400 text-slate-950 text-xs font-extrabold flex items-center justify-center">3</span>
+                        <span>喺閒置 iPad 設定「全螢幕 App 模式 + 長亮防鎖機」</span>
+                    </div>
+                    <ul class="text-xs opacity-85 space-y-1.5 list-disc pl-4">
+                        <li><strong>變身全螢幕 App</strong>：用 iPad Safari 打開你個網址 ➔ 撳右上角「分享 <code class="px-1 py-0.5 rounded bg-white/10">[↑]</code>」➔ 揀<strong>「加入主畫面 (Add to Home Screen)」</strong>。返去 iPad 桌面撳個新 Icon 打開，就會自動隱藏晒頂部網址列同分頁列！</li>
+                        <li><strong>玄關長開不休眠</strong>：去 iPad「設定 ➔ 螢幕顯示與亮度 ➔ 自動鎖定」設為<strong>「永不 (Never)」</strong>，並插住充電線（建議用 90度彎頭線更美觀）。</li>
+                        <li><strong>專機鎖定（可選）</strong>：去 iPad「設定 ➔ 輔助使用 ➔ 引導使用模式 (Guided Access)」開啟功能，喺 App 內連撳三下電源掣即可鎖定畫面，屋企人撳極都唔會跳出桌面。</li>
+                    </ul>
+                </div>
+
+                <!-- Night Schedule & WakeLock Quick Controls -->
+                <div class="surface-pill rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-emerald-400 text-xs sm:text-sm">🌙 自動夜間低光排程 (23:30 - 06:30)</div>
+                        <p class="opacity-75 text-xs mt-0.5">深夜自動調暗畫面並啟動像素微移，保護閒置 iPad 螢幕不留殘影。</p>
+                    </div>
+                    <button onclick="toggleAutoNightSchedule()" id="auto-night-btn" class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shrink-0 transition">
+                        已開啟
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2.5 pt-1">
+                    <button onclick="requestFullScreenAndWakeLock()" class="flex-1 py-3 rounded-xl bg-violet-500 hover:bg-violet-400 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        <span>立即啟動全螢幕 + 防休眠長亮 (WakeLock)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Title Edit Modal -->
+    <div id="title-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bento-card rounded-3xl w-full max-w-sm p-5 space-y-4 border border-white/15">
+            <h3 class="text-base font-extrabold">修改玄關看板名稱</h3>
+            <input type="text" id="hub-title-input" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 text-white border border-white/15 text-sm font-bold" placeholder="例如：陳氏玄關 · HOME HUB">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeTitleModal()" class="surface-pill px-4 py-2 rounded-xl text-xs font-bold">取消</button>
+                <button onclick="saveHubTitle()" class="px-4 py-2 rounded-xl bg-sky-500 text-slate-950 text-xs font-extrabold">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Night Low-Light Standby Overlay -->
+    <div id="night-standby-overlay" onclick="toggleNightStandby()" class="fixed inset-0 z-40 bg-black/95 backdrop-blur-md hidden flex-col items-center justify-center cursor-pointer">
+        <div class="burn-in-safe flex flex-col items-center text-center px-6">
+            <div id="standby-clock" class="font-mono-num text-7xl sm:text-9xl font-extrabold text-white/30 tracking-tighter">10:40</div>
+            <div id="standby-subinfo" class="text-white/25 text-xs sm:text-sm font-semibold mt-3 flex items-center gap-3">
+                <span>26°C · 天色良好</span>
+            </div>
+            <p class="text-white/15 text-xs mt-6 tracking-widest">玄關夜間防殘影低光模式 · 輕觸畫面喚醒</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-box" class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/95 text-white border border-white/15 text-xs font-bold shadow-2xl transition-all duration-300 opacity-0 pointer-events-none translate-y-2 flex items-center gap-2">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toast-msg">已更新</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'HK_ENTRYWAY_HUB_V1';
+
+        const DEFAULT_ROUTES = [
+            {
+                id: 'r1',
+                operator: 'KMB',
+                route: '89D',
+                dest: '藍田站',
+                stopName: '沙田第一城 / 富豪花園',
+                stopId: 'B32F254789C6D511',
+                isLiveApi: false,
+                freq: 7,
+                offset: 2
+            },
+            {
+                id: 'r2',
+                operator: 'CTB',
+                route: '968',
+                dest: '銅鑼灣 (天后)',
+                stopName: '西區海底隧道轉車站',
+                stopId: '',
+                isLiveApi: false,
+                freq: 8,
+                offset: 4
+            },
+            {
+                id: 'r3',
+                operator: 'GMB',
+                route: '803',
+                dest: '顯徑 / 大圍站',
+                stopName: '屋苑正門小巴站',
+                stopId: '',
+                isLiveApi: false,
+                freq: 6,
+                offset: 1
+            },
+            {
+                id: 'r4',
+                operator: 'NR',
+                route: 'NR88',
+                dest: '中環 / 灣仔 (邨巴)',
+                stopName: '平台會所穿梭巴站',
+                stopId: '',
+                isLiveApi: false,
+                freq: 15,
+                offset: 9
             }
-          } catch(e){}
-        }));
+        ];
 
-        // 3. 過濾出所有名字叫「富豪花園」或者包含「沙田市中心」的精確物理加密 ID
-        const matchedIds = [];
-        uniqueCandidates.forEach(sid => {
-          const name = stopNamesMap[sid] || "";
-          if (name === "富豪花園" || name.includes("沙田市中心")) {
-            matchedIds.push(sid);
-          }
-        });
+        const DEFAULT_EVENTS = [
+            { id: 'e1', title: '繳交今期煤氣費 & 信用卡結單', day: 4, time: '12:00', tag: '繳費', done: false },
+            { id: 'e2', title: '順豐速運上門收退貨件', day: 4, time: '16:30', tag: '重要', done: false },
+            { id: 'e3', title: 'Happy Friday 同屋企人食晚飯 (已訂位)', day: 5, time: '19:30', tag: '聚會', done: false },
+            { id: 'e4', title: '星期六大掃除 + 換床單冷氣隔塵網', day: 6, time: '11:00', tag: '屋企', done: false },
+            { id: 'e5', title: '行山郊遊 / 買定下星期生果日用品', day: 0, time: '10:30', tag: '屋企', done: false }
+        ];
 
-        globalResolvedStopIds = [...new Set(matchedIds)];
-        
-        if (globalResolvedStopIds.length === 0) throw new Error("No stops found");
+        const DEFAULT_CHECKLIST = [
+            { id: 'c1', label: '🔑 鎖匙', checked: true },
+            { id: 'c2', label: '📱 手機 / 八達通', checked: true },
+            { id: 'c3', label: '☂️ 雨遮', checked: false },
+            { id: 'c4', label: '❄️ 熄冷氣 / 關窗', checked: false }
+        ];
 
-        localStorage.setItem(CACHE_KEY_STOPS, JSON.stringify(globalResolvedStopIds));
-        return true;
-      } catch (err) {
-        console.error("Harvesting failed:", err);
-        DOM.weatherSummary.textContent = "系統初始化失敗，請重新整理網頁。";
-        return false;
-      }
-    }
+        const MEMO_PRESETS = [
+            '💛 出門前望一望：帶齊鎖匙、銀包、八達通！今晚 7:30 齊人開飯～',
+            '📦 門邊放咗順豐退貨袋，今日邊個早出門記得幫手拎落樓下智能櫃！',
+            '🌿 呢幾日天氣稍涼乾燥，出門口記得帶件薄外套同飲多杯水！',
+            '🗑️ 出門口順手拎埋玄關袋垃圾落樓，唔該晒屋企人！'
+        ];
 
-    /**
-     * 【並發大數據管道 + dest_tc 目的地精準對號入座 + 走車秒級抹除】
-     */
-    async function executeConcurrentTransitPoll() {
-      if (globalResolvedStopIds.length === 0) return;
+        let state = {
+            theme: 'dark',
+            hubTitle: '玄關智能資訊版 · ENTRYWAY HUB',
+            district: '香港天文台',
+            checklist: DEFAULT_CHECKLIST,
+            familyMemo: MEMO_PRESETS[0],
+            routes: DEFAULT_ROUTES,
+            transportFilter: 'ALL',
+            walkBuffer: 4, // Minutes needed to take the lift + walk to bus stop
+            autoNightMode: true,
+            events: DEFAULT_EVENTS,
+            selectedWeekDay: 'ALL',
+            newEventTag: '重要',
+            lastWeatherSummary: { temp: 26, desc: '大致天晴', warnings: [] },
+            latestEtasSummary: []
+        };
 
-      const now = new Date();
+        // Live route search temporary cache
+        let liveSearchContext = {
+            operator: 'KMB',
+            route: '',
+            directions: [],
+            stops: []
+        };
 
-      // 同時向採集到嘅物理站點發送實時預報請求
-      const promises = globalResolvedStopIds.map(async (sid) => {
-        try {
-          const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${sid}`);
-          if (res.ok) {
-            const json = await res.json();
-            return json.data || [];
-          }
-        } catch (e) {}
-        return [];
-      });
+        /*__PRELOADED_STATE_ANCHOR__*/
 
-      const results = await Promise.all(promises);
-      const megaMergedList = results.flat();
-
-      globalCachedEtaStore = {};
-
-      // 智能過濾分流：拋棄盲猜站位代碼，直接用「車號 + 目的地字眼」進行對號入座
-      MONITOR_ROUTES_LIST.forEach(userRoute => {
-        const filteredRaw = megaMergedList.filter(item => {
-          if (item.route !== userRoute.route || !item.eta || !item.dest_tc) return false;
-          
-          // 精確比對目的地（例如 86K 目的地必須包含「沙田」）
-          if (!item.dest_tc.includes(userRoute.destFilter)) return false;
-
-          return true;
-        });
-
-        // 去重與走車退走機制
-        const uniqueEtas = [];
-        const seenTimes = new Set();
-
-        filteredRaw.forEach(item => {
-          if (!seenTimes.has(item.eta)) {
-            const targetTime = new Date(item.eta);
-            
-            // 💡【秒級走車抹除】只要巴士預計到站時間早過當前時間，代表車已開走，立刻丟棄抹除！
-            if (targetTime - now < 0) return;
-
-            seenTimes.add(item.eta);
-            uniqueEtas.push(item);
-          }
-        });
-
-        // 依時間排序
-        uniqueEtas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
-        globalCachedEtaStore[userRoute.route] = uniqueEtas;
-      });
-
-      renderGlobalDashboardUI();
-    }
-
-    // 香港天文台大數據直連
-    async function fetchLiveNewsAndWeather() {
-      const cacheBust = Date.now();
-      try {
-        const res = await fetch(`https://api.data.gov.hk/v1/transport/hk/tss/special-traffic-news?lang=tc&_=${cacheBust}`);
-        if (res.ok) {
-          const json = await res.json();
-          DOM.trafficText.textContent = (json && json.length > 0) ? json[0].msgText : "現時交通大致正常。";
-        }
-      } catch (e) {}
-
-      try {
-        const wRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&_=${cacheBust}`);
-        if (wRes.ok) {
-          const wData = await wRes.json();
-          if (wData?.temperature?.data?.length > 0) {
-            const shatinTemp = wData.temperature.data.find(d => d.place === "沙田");
-            DOM.temp.textContent = shatinTemp ? `${shatinTemp.value}°C` : `${wData.temperature.data[0].value}°C`;
-          }
-          if (wData?.humidity?.data?.length > 0) {
-            DOM.humidity.textContent = `相對濕度：${wData.humidity.data[0].value}%`;
-          }
-          if (wData?.generalSituation) {
-            DOM.weatherSummary.innerHTML = `<strong>【今日天氣概況】</strong>${wData.generalSituation}`;
-          }
+        function loadState() {
+            try {
+                if (window.__PRELOADED_STATE__) {
+                    state = { ...state, ...window.__PRELOADED_STATE__ };
+                }
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    state = { ...state, ...parsed };
+                }
+            } catch (e) {
+                console.warn('LocalStorage load fallback:', e);
+            }
         }
 
-        const warnRes = await fetch(`https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&_=${cacheBust}`);
-        if (warnRes.ok) {
-          const warnData = await warnRes.json();
-          const keys = Object.keys(warnData);
-          DOM.warnings.textContent = keys.length > 0 ? ` ⚠️ 生效警告: ${keys.map(k => warnData[k].name).join(', ')}` : "";
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                console.warn('LocalStorage save fallback:', e);
+            }
         }
-      } catch (e) {}
-    }
 
-    async function startEngine() {
-      setInterval(runLiveClock, 1000);
-      runLiveClock();
+        function showToast(msg) {
+            const box = document.getElementById('toast-box');
+            document.getElementById('toast-msg').textContent = msg;
+            box.classList.remove('opacity-0', 'translate-y-2');
+            box.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                box.classList.add('opacity-0', 'translate-y-2');
+                box.classList.remove('opacity-100', 'translate-y-0');
+            }, 2400);
+        }
 
-      renderGlobalDashboardUI();
+        function updateClock() {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const hmText = `${hh}:${mm}`;
 
-      // 第一步：動態採集路線物理 ID 避開 CORS 大名冊封鎖
-      const setupSuccess = await resolveTargetStopIds();
-      if (!setupSuccess) return;
+            document.getElementById('clock-hm').textContent = hmText;
+            document.getElementById('clock-sec').textContent = ss;
+            document.getElementById('standby-clock').textContent = hmText;
 
-      // 第二步：啟動定時輪詢
-      async function triggerPipeline() {
-        await Promise.all([executeConcurrentTransitPoll(), fetchLiveNewsAndWeather()]);
-      }
-      
-      setInterval(triggerPipeline, 30000);
-      triggerPipeline();
-    }
+            const daysTC = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const dateStr = `${now.getMonth() + 1}月${now.getDate()}日 ${daysTC[now.getDay()]}`;
+            document.getElementById('date-display').textContent = dateStr;
 
-    document.addEventListener('DOMContentLoaded', startEngine);
-  </script>
+            // Check automatic night mode schedule (23:30 - 06:30) at the top of each minute
+            if (state.autoNightMode && ss === '00') {
+                const minsOfDay = now.getHours() * 60 + now.getMinutes();
+                const overlay = document.getElementById('night-standby-overlay');
+                if (minsOfDay === 23 * 60 + 30 && overlay.classList.contains('hidden')) {
+                    overlay.classList.remove('hidden');
+                    overlay.classList.add('flex');
+                } else if (minsOfDay === 6 * 60 + 30 && !overlay.classList.contains('hidden')) {
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
+                }
+            }
+        }
+
+        function setTheme(themeName) {
+            state.theme = themeName;
+            if (themeName === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', themeName);
+            }
+
+            ['dark', 'japandi', 'swiss'].forEach(t => {
+                const btn = document.getElementById(`theme-btn-${t}`);
+                if (!btn) return;
+                if (t === themeName) {
+                    btn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 bg-sky-500 text-slate-950 shadow-sm';
+                } else {
+                    btn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 opacity-65 hover:opacity-100';
+                }
+            });
+            saveState();
+        }
+
+        function renderChecklistBar() {
+            const container = document.getElementById('door-checklist-bar');
+            const itemsHtml = state.checklist.map(item => `
+                <button onclick="toggleChecklistItem('${item.id}')"
+                    class="px-3 py-1.5 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                        item.checked
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : 'surface-pill opacity-75 hover:opacity-100'
+                    }">
+                    <span>${item.label}</span>
+                    ${item.checked ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+                </button>
+            `).join('');
+
+            const allChecked = state.checklist.every(c => c.checked);
+            const resetBtnHtml = `
+                <button onclick="resetAllChecklist()" title="一鍵重置或全選今日出門清單"
+                    class="px-2.5 py-1.5 rounded-2xl text-[11px] font-bold surface-pill opacity-60 hover:opacity-100 transition shrink-0 flex items-center gap-1">
+                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    <span>${allChecked ? '重置' : '全選'}</span>
+                </button>
+            `;
+            container.innerHTML = itemsHtml + resetBtnHtml;
+            lucide.createIcons();
+        }
+
+        function toggleChecklistItem(id) {
+            const item = state.checklist.find(c => c.id === id);
+            if (item) {
+                item.checked = !item.checked;
+                saveState();
+                renderChecklistBar();
+            }
+        }
+
+        function resetAllChecklist() {
+            const allChecked = state.checklist.every(c => c.checked);
+            state.checklist.forEach(c => c.checked = !allChecked);
+            saveState();
+            renderChecklistBar();
+            showToast(allChecked ? '已重置出門前 Check-list' : '已剔選全部出門物品 ✅');
+        }
+
+        async function fetchWeatherData(manual = false) {
+            const icon = document.getElementById('weather-refresh-icon');
+            if (icon) icon.classList.add('animate-spin');
+
+            try {
+                const [rhrRes, fndRes, warnRes] = await Promise.all([
+                    fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc'),
+                    fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc'),
+                    fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc').catch(() => null)
+                ]);
+
+                if (!rhrRes.ok || !fndRes.ok) throw new Error('HKO API unavailable');
+
+                const rhrData = await rhrRes.json();
+                const fndData = await fndRes.json();
+                const warnData = (warnRes && warnRes.ok) ? await warnRes.json() : {};
+
+                // Extract district temperature
+                const tempArr = rhrData?.temperature?.data || [];
+                const matchedPlace = tempArr.find(p => p.place === state.district) || tempArr[0];
+                const currentTemp = matchedPlace ? matchedPlace.value : 26;
+
+                // Extract humidity & UV
+                const humidity = rhrData?.humidity?.data?.[0]?.value ?? 68;
+                const uvVal = rhrData?.uvindex?.data?.[0]?.value ?? null;
+                const uvDesc = rhrData?.uvindex?.data?.[0]?.desc ?? '中';
+
+                document.getElementById('weather-temp').textContent = currentTemp;
+                document.getElementById('weather-humidity').textContent = `${humidity}%`;
+                document.getElementById('weather-uv').textContent = uvVal !== null ? `${uvVal} (${uvDesc})` : '低';
+
+                // Render active HKO warning signals (warnsum)
+                const activeWarnings = Object.values(warnData || {}).map(w => w.name || w.type).filter(Boolean);
+                const warnBar = document.getElementById('weather-warnings-bar');
+                if (activeWarnings.length > 0) {
+                    warnBar.innerHTML = activeWarnings.map(wName => `
+                        <span class="px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1 animate-pulse-slow">
+                            <i data-lucide="alert-triangle" class="w-3 h-3 text-rose-400"></i>
+                            <span>生效警告：${wName}</span>
+                        </span>
+                    `).join('');
+                } else {
+                    warnBar.innerHTML = '';
+                }
+
+                // Forecast parsing
+                const forecasts = fndData?.weatherForecast || [];
+                let shortDesc = '大致天晴';
+                if (forecasts.length > 0) {
+                    const todayF = forecasts[0];
+                    const minT = todayF?.forecastMintemp?.value ?? (currentTemp - 2);
+                    const maxT = todayF?.forecastMaxtemp?.value ?? (currentTemp + 2);
+                    document.getElementById('weather-range').textContent = `${minT}° / ${maxT}°`;
+
+                    const descText = todayF?.forecastWeather || '大致天晴';
+                    shortDesc = descText.length > 18 ? descText.slice(0, 18) + '…' : descText;
+                    document.getElementById('weather-desc').textContent = shortDesc;
+
+                    // Umbrella recommendation
+                    const needUmbrella = /雨|雷|驟/.test(descText) || activeWarnings.some(w => /雨|雷|風/.test(w));
+                    const tipEl = document.getElementById('weather-umbrella-tip');
+                    if (needUmbrella) {
+                        tipEl.className = 'mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+                        tipEl.innerHTML = '<i data-lucide="umbrella" class="w-3.5 h-3.5"></i><span>出門提點：今日有驟雨，記得帶遮 ☂️</span>';
+                    } else {
+                        tipEl.className = 'mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25';
+                        tipEl.innerHTML = '<i data-lucide="sun-medium" class="w-3.5 h-3.5"></i><span>出門提點：天色穩定，安心出門 ✨</span>';
+                    }
+
+                    // Render 5-day forecast strip
+                    renderFiveDayForecast(forecasts.slice(0, 5));
+                }
+
+                state.lastWeatherSummary = { temp: currentTemp, desc: shortDesc, warnings: activeWarnings };
+                const standbySub = document.getElementById('standby-subinfo');
+                if (standbySub) {
+                    standbySub.textContent = `${ state.district } ${ currentTemp }°C · ${ shortDesc }`;
+                }
+
+                document.getElementById('weather-source-badge').textContent = '天文台實時連線';
+                if (manual) showToast(`已更新 ${state.district} 天氣數據`);
+            } catch (err) {
+                // Fallback if offline
+                renderFallbackWeather();
+            } finally {
+                if (icon) setTimeout(() => icon.classList.remove('animate-spin'), 400);
+                lucide.createIcons();
+            }
+        }
+
+        function renderFiveDayForecast(days) {
+            const row = document.getElementById('weather-forecast-row');
+            row.innerHTML = days.map((d, idx) => {
+                const weekLabel = idx === 0 ? '今日' : (d.week ? d.week.replace('星期', '週') : '');
+                const isRain = /雨|雷/.test(d.forecastWeather || '');
+                const iconName = isRain ? 'cloud-rain' : 'cloud-sun';
+                const iconColor = isRain ? 'text-sky-400' : 'text-amber-400';
+                return `
+                    <div class="surface-pill rounded-2xl p-2 flex flex-col items-center">
+                        <span class="text-[11px] font-bold opacity-75">${weekLabel}</span>
+                        <i data-lucide="${iconName}" class="w-4 h-4 my-1.5 ${iconColor}"></i>
+                        <span class="font-mono-num text-[11px] font-bold">${d.forecastMintemp?.value ?? 23}°-${d.forecastMaxtemp?.value ?? 28}°</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderFallbackWeather() {
+            const sampleDays = [
+                { week: '今日', forecastWeather: '陽光', forecastMintemp: { value: 23 }, forecastMaxtemp: { value: 28 } },
+                { week: '星期五', forecastWeather: '陽光', forecastMintemp: { value: 24 }, forecastMaxtemp: { value: 29 } },
+                { week: '星期六', forecastWeather: '驟雨', forecastMintemp: { value: 22 }, forecastMaxtemp: { value: 26 } },
+                { week: '星期日', forecastWeather: '陽光', forecastMintemp: { value: 23 }, forecastMaxtemp: { value: 27 } },
+                { week: '星期一', forecastWeather: '陽光', forecastMintemp: { value: 24 }, forecastMaxtemp: { value: 28 } }
+            ];
+            renderFiveDayForecast(sampleDays);
+        }
+
+        function changeWeatherDistrict(newDistrict) {
+            state.district = newDistrict;
+            saveState();
+            fetchWeatherData(true);
+        }
+
+        const OPERATOR_META = {
+            KMB: { label: '九巴', badgeClass: 'bg-rose-500/20 text-rose-400 border-rose-500/30', type: 'BUS' },
+            CTB: { label: '城巴', badgeClass: 'bg-amber-400/20 text-amber-300 border-amber-400/30', type: 'BUS' },
+            GMB: { label: '綠Van小巴', badgeClass: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', type: 'MINIBUS' },
+            RMB: { label: '紅Van小巴', badgeClass: 'bg-red-500/20 text-red-400 border-red-500/30', type: 'MINIBUS' },
+            NR:  { label: '屋苑邨巴', badgeClass: 'bg-violet-500/20 text-violet-300 border-violet-500/30', type: 'MINIBUS' }
+        };
+
+        async function computeRouteETAs(routeItem) {
+            // Try Live KMB, CTB (Citybus), or GMB API if routeItem has live API identifiers
+            if (routeItem.isLiveApi && routeItem.operator === 'KMB' && routeItem.stopId) {
+                try {
+                    const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${routeItem.stopId}/${routeItem.route}/1`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const now = Date.now();
+                        const mins = (json.data || [])
+                            .filter(e => e.eta && (!routeItem.dir || e.dir === routeItem.dir))
+                            .map(e => Math.max(0, Math.round((new Date(e.eta).getTime() - now) / 60000)))
+                            .slice(0, 3);
+                        if (mins.length > 0) return { mins, isLive: true };
+                    }
+                } catch (e) {
+                    console.warn('KMB live fallback:', e);
+                }
+            }
+
+            if (routeItem.isLiveApi && routeItem.operator === 'CTB' && routeItem.stopId) {
+                try {
+                    const res = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${routeItem.stopId}/${routeItem.route}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const now = Date.now();
+                        const mins = (json.data || [])
+                            .filter(e => e.eta && (!routeItem.dir || e.dir === routeItem.dir))
+                            .map(e => Math.max(0, Math.round((new Date(e.eta).getTime() - now) / 60000)))
+                            .slice(0, 3);
+                        if (mins.length > 0) return { mins, isLive: true };
+                    }
+                } catch (e) {
+                    console.warn('CTB live fallback:', e);
+                }
+            }
+
+            if (routeItem.isLiveApi && routeItem.operator === 'GMB' && routeItem.gmbRouteId && routeItem.gmbStopSeq) {
+                try {
+                    const res = await fetch(`https://data.etagmb.gov.hk/eta/route-stop/${routeItem.gmbRouteId}/${routeItem.gmbRouteSeq || 1}/${routeItem.gmbStopSeq}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        const etaList = json?.data?.eta || [];
+                        const mins = etaList.map(e => Math.max(0, e.diff)).slice(0, 3);
+                        if (mins.length > 0) return { mins, isLive: true };
+                    }
+                } catch (e) {
+                    console.warn('GMB live fallback:', e);
+                }
+            }
+
+            // Dynamic realistic cadence calculation based on current minute & route frequency
+            const now = new Date();
+            const freq = Number(routeItem.freq) || 8;
+            const offset = Number(routeItem.offset) || 2;
+            const currentMinuteMod = (now.getMinutes() + offset) % freq;
+            const firstEta = freq - currentMinuteMod - (now.getSeconds() > 40 ? 1 : 0);
+            const m1 = Math.max(1, firstEta);
+            const m2 = m1 + freq;
+            const m3 = m2 + freq;
+            return { mins: [m1, m2, m3], isLive: false };
+        }
+
+        function cycleWalkBuffer() {
+            const options = [2, 4, 6, 8, 10];
+            const idx = options.indexOf(Number(state.walkBuffer) || 4);
+            state.walkBuffer = options[(idx + 1) % options.length];
+            document.getElementById('walk-buffer-label').textContent = state.walkBuffer;
+            saveState();
+            refreshAllTransportETAs(false);
+            showToast(`已設定連等𨋢步程為 ${state.walkBuffer} 分鐘`);
+        }
+
+        async function refreshAllTransportETAs(manual = false) {
+            const icon = document.getElementById('eta-refresh-icon');
+            if (icon) icon.classList.add('animate-spin');
+
+            const walkBuf = Number(state.walkBuffer) || 4;
+            const walkLabel = document.getElementById('walk-buffer-label');
+            if (walkLabel) walkLabel.textContent = walkBuf;
+
+            const container = document.getElementById('transport-eta-list');
+            const filteredRoutes = state.routes.filter(r => {
+                if (state.transportFilter === 'ALL') return true;
+                const meta = OPERATOR_META[r.operator] || OPERATOR_META.KMB;
+                return meta.type === state.transportFilter;
+            });
+
+            if (filteredRoutes.length === 0) {
+                container.innerHTML = `
+                    <div class="surface-pill rounded-2xl p-8 text-center space-y-2">
+                        <p class="text-sm font-bold opacity-75">尚未有此類別的路線</p>
+                        <button onclick="openRouteManagerModal()" class="text-xs text-sky-400 font-bold hover:underline">+ 點擊揀選你的巴士或小巴路線</button>
+                    </div>
+                `;
+                if (icon) icon.classList.remove('animate-spin');
+                return;
+            }
+
+            const summaryList = [];
+            const cardsHtml = await Promise.all(filteredRoutes.map(async (r) => {
+                const meta = OPERATOR_META[r.operator] || OPERATOR_META.KMB;
+                const { mins, isLive } = await computeRouteETAs(r);
+                const nextMin = mins[0] ?? 5;
+                const secondMin = mins[1] ?? (nextMin + (Number(r.freq) || 8));
+
+                // Smart Walk + Lift Buffer evaluation
+                let urgencyBadge = '';
+                let mainTimeClass = 'text-sky-400';
+                let leaveAdvice = '';
+
+                if (nextMin < walkBuf) {
+                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-500/20 text-slate-300 border border-slate-500/30">頭班趕唔切 · 建議睇下班 (${secondMin}分)</span>`;
+                    mainTimeClass = 'opacity-45';
+                    leaveAdvice = `趕唔切頭班，下班 ${secondMin} 分鐘到`;
+                } else if (nextMin <= walkBuf + 2) {
+                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse-slow">🔥 即刻出門撳𨋢！</span>`;
+                    mainTimeClass = 'text-rose-400';
+                    leaveAdvice = `仲有 ${nextMin} 分鐘到，即刻出門啱啱好`;
+                } else if (nextMin <= walkBuf + 5) {
+                    const waitBeforeLeave = nextMin - walkBuf;
+                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">準備穿鞋 · ${waitBeforeLeave}分鐘後出門</span>`;
+                    mainTimeClass = 'text-amber-400';
+                    leaveAdvice = `仲有 ${nextMin} 分鐘到，${waitBeforeLeave} 分鐘後出門`;
+                } else {
+                    const waitBeforeLeave = nextMin - walkBuf;
+                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">時間充裕 · ${waitBeforeLeave}分鐘後出門</span>`;
+                    mainTimeClass = 'text-emerald-400';
+                    leaveAdvice = `仲有 ${nextMin} 分鐘到`;
+                }
+
+                summaryList.push({ route: r.route, dest: r.dest, nextMin, secondMin, leaveAdvice });
+                const subEtas = mins.slice(1).map(m => `${m}分`).join(' · ');
+
+                return `
+                    <div class="surface-pill rounded-2xl p-3.5 hover:border-sky-500/40 transition flex items-center justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${meta.badgeClass}">${meta.label}</span>
+                                <span class="font-mono-num text-xl sm:text-2xl font-extrabold tracking-tight">${r.route}</span>
+                                <span class="text-xs sm:text-sm font-bold truncate">往 ${r.dest}</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1.5 text-xs opacity-65">
+                                <span class="truncate flex items-center gap-1">
+                                    <i data-lucide="map-pin" class="w-3 h-3 shrink-0"></i>${r.stopName}
+                                </span>
+                                ${isLive ? '<span class="text-[10px] text-sky-400 font-bold shrink-0">● 實時GPS</span>' : ''}
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0 flex flex-col items-end">
+                            <div class="flex items-baseline gap-1">
+                                <span class="font-mono-num text-3xl sm:text-4xl font-extrabold ${mainTimeClass}">${nextMin}</span>
+                                <span class="text-xs font-bold opacity-75">分鐘</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 mt-1 flex-wrap justify-end">
+                                ${urgencyBadge}
+                                ${subEtas ? `<span class="font-mono-num text-[11px] opacity-60">隨後 ${subEtas}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }));
+
+            state.latestEtasSummary = summaryList;
+            container.innerHTML = cardsHtml.join('');
+            const now = new Date();
+            document.getElementById('eta-last-updated').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} 更新`;
+
+            if (icon) setTimeout(() => icon.classList.remove('animate-spin'), 350);
+            if (manual) showToast('已刷新最新巴士及小巴到站時間');
+            lucide.createIcons();
+        }
+
+        function setTransportFilter(filterType) {
+            state.transportFilter = filterType;
+            ['ALL', 'BUS', 'MINIBUS'].forEach(f => {
+                const btn = document.getElementById(`filter-trans-${f}`);
+                if (!btn) return;
+                if (f === filterType) {
+                    btn.className = 'px-3 py-1 rounded-xl text-xs font-bold transition bg-sky-500 text-slate-950';
+                } else {
+                    btn.className = 'px-3 py-1 rounded-xl text-xs font-bold transition surface-pill opacity-70 hover:opacity-100';
+                }
+            });
+            refreshAllTransportETAs(false);
+        }
+
+        function openRouteManagerModal() {
+            document.getElementById('route-modal').classList.remove('hidden');
+            document.getElementById('route-modal').classList.add('flex');
+            renderSavedRoutesInModal();
+        }
+
+        function closeRouteManagerModal() {
+            document.getElementById('route-modal').classList.add('hidden');
+            document.getElementById('route-modal').classList.remove('flex');
+        }
+
+        function switchRouteAddTab(tab) {
+            const livePanel = document.getElementById('panel-route-live');
+            const customPanel = document.getElementById('panel-route-custom');
+            const liveBtn = document.getElementById('tab-route-live');
+            const customBtn = document.getElementById('tab-route-custom');
+
+            if (tab === 'LIVE_KMB') {
+                livePanel.classList.remove('hidden');
+                customPanel.classList.add('hidden');
+                liveBtn.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition bg-sky-500 text-slate-950';
+                customBtn.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition opacity-70';
+            } else {
+                livePanel.classList.add('hidden');
+                customPanel.classList.remove('hidden');
+                customBtn.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition bg-sky-500 text-slate-950';
+                liveBtn.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition opacity-70';
+            }
+        }
+
+        function onLiveOperatorChange() {
+            document.getElementById('live-search-results').classList.add('hidden');
+        }
+
+        async function searchLiveRouteStops() {
+            const op = document.getElementById('live-operator-select').value;
+            const routeCode = document.getElementById('live-route-input').value.trim().toUpperCase();
+            const statusEl = document.getElementById('live-search-status');
+            const resultsBox = document.getElementById('live-search-results');
+
+            if (!routeCode) {
+                statusEl.textContent = '⚠️ 請先輸入路線號碼（例如：89D, 1A, 968, 803）';
+                return;
+            }
+
+            statusEl.textContent = `⏳ 正在從香港實時交通資料庫搜尋 ${routeCode} 號線...`;
+            resultsBox.classList.add('hidden');
+
+            try {
+                if (op === 'KMB') {
+                    const [outRes, inRes] = await Promise.all([
+                        fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/${routeCode}/outbound/1`),
+                        fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/${routeCode}/inbound/1`)
+                    ]);
+                    const outJson = outRes.ok ? await outRes.json() : {};
+                    const inJson = inRes.ok ? await inRes.json() : {};
+
+                    const dirs = [];
+                    if (outJson?.data?.dest_tc) {
+                        dirs.push({ dir: 'outbound', code: 'O', dest_tc: outJson.data.dest_tc, orig_tc: outJson.data.orig_tc });
+                    }
+                    if (inJson?.data?.dest_tc) {
+                        dirs.push({ dir: 'inbound', code: 'I', dest_tc: inJson.data.dest_tc, orig_tc: inJson.data.orig_tc });
+                    }
+
+                    if (dirs.length === 0) {
+                        statusEl.textContent = `❌ 找不到九巴 ${routeCode} 路線，請確認號碼或切換至「手動新增」。`;
+                        return;
+                    }
+
+                    liveSearchContext = { operator: 'KMB', route: routeCode, directions: dirs, stops: [] };
+                    const dirSelect = document.getElementById('live-direction-select');
+                    dirSelect.innerHTML = dirs.map((d, idx) =>
+                        `<option value="${idx}">往 ${d.dest_tc} (由 ${d.orig_tc} 開出)</option>`
+                    ).join('');
+
+                    resultsBox.classList.remove('hidden');
+                    await loadLiveStopsForDirection();
+                } else if (op === 'CTB') {
+                    const res = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route/CTB/${routeCode}`);
+                    const json = res.ok ? await res.json() : {};
+                    const rData = json?.data;
+
+                    if (!rData || !rData.orig_tc) {
+                        statusEl.textContent = `❌ 找不到城巴 ${routeCode} 路線，請確認號碼或切換至「手動新增」。`;
+                        return;
+                    }
+
+                    const dirs = [
+                        { dir: 'outbound', code: 'O', dest_tc: rData.dest_tc, orig_tc: rData.orig_tc },
+                        { dir: 'inbound', code: 'I', dest_tc: rData.orig_tc, orig_tc: rData.dest_tc }
+                    ];
+
+                    liveSearchContext = { operator: 'CTB', route: routeCode, directions: dirs, stops: [] };
+                    const dirSelect = document.getElementById('live-direction-select');
+                    dirSelect.innerHTML = dirs.map((d, idx) =>
+                        `<option value="${idx}">往 ${d.dest_tc} (由 ${d.orig_tc} 開出)</option>`
+                    ).join('');
+
+                    resultsBox.classList.remove('hidden');
+                    await loadLiveStopsForDirection();
+                } else {
+                    // Green Minibus (GMB) lookup
+                    const region = op.replace('GMB_', '');
+                    const res = await fetch(`https://data.etagmb.gov.hk/route/${region}/${routeCode}`);
+                    const json = await res.json();
+                    const gmbRoutes = json?.data || [];
+
+                    if (gmbRoutes.length === 0) {
+                        statusEl.textContent = `❌ 在此區域找不到 ${routeCode} 專線小巴，請試選其他區域或使用「手動新增」。`;
+                        return;
+                    }
+
+                    const firstRoute = gmbRoutes[0];
+                    const dirs = (firstRoute.directions || []).map(d => ({
+                        gmbRouteId: firstRoute.route_id,
+                        routeSeq: d.route_seq,
+                        dest_tc: d.dest_tc,
+                        orig_tc: d.orig_tc
+                    }));
+
+                    liveSearchContext = { operator: 'GMB', route: routeCode, directions: dirs, stops: [] };
+                    const dirSelect = document.getElementById('live-direction-select');
+                    dirSelect.innerHTML = dirs.map((d, idx) =>
+                        `<option value="${idx}">往 ${d.dest_tc} (由 ${d.orig_tc} 開出)</option>`
+                    ).join('');
+
+                    resultsBox.classList.remove('hidden');
+                    await loadLiveStopsForDirection();
+                }
+            } catch (e) {
+                statusEl.textContent = '⚠️ 網絡連線繁忙，建議直接使用上方「手動新增」快速設定。';
+            }
+        }
+
+        async function loadLiveStopsForDirection() {
+            const dirIdx = Number(document.getElementById('live-direction-select').value || 0);
+            const chosenDir = liveSearchContext.directions[dirIdx];
+            const stopSelect = document.getElementById('live-stop-select');
+            const statusEl = document.getElementById('live-search-status');
+
+            stopSelect.innerHTML = '<option>載入車站名單中...</option>';
+
+            try {
+                if (liveSearchContext.operator === 'KMB') {
+                    const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${liveSearchContext.route}/${chosenDir.dir}/1`);
+                    const json = await res.json();
+                    const rawStops = (json.data || []).slice(0, 35);
+
+                    const detailedStops = await Promise.all(rawStops.map(async (s) => {
+                        try {
+                            const sRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`);
+                            const sJson = await sRes.json();
+                            return { stopId: s.stop, seq: s.seq, name_tc: sJson?.data?.name_tc || `第 ${s.seq} 站` };
+                        } catch {
+                            return { stopId: s.stop, seq: s.seq, name_tc: `第 ${s.seq} 站` };
+                        }
+                    }));
+
+                    liveSearchContext.stops = detailedStops;
+                    stopSelect.innerHTML = detailedStops.map((st, i) =>
+                        `<option value="${i}">${st.seq}. ${st.name_tc}</option>`
+                    ).join('');
+                    statusEl.textContent = `✅ 已載入九巴 ${liveSearchContext.route} 號線車站，請揀選你上車的一站。`;
+                } else if (liveSearchContext.operator === 'CTB') {
+                    const res = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/${liveSearchContext.route}/${chosenDir.dir}`);
+                    const json = await res.json();
+                    const rawStops = (json.data || []).slice(0, 35);
+
+                    const detailedStops = await Promise.all(rawStops.map(async (s) => {
+                        try {
+                            const sRes = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/stop/${s.stop}`);
+                            const sJson = await sRes.json();
+                            return { stopId: s.stop, seq: s.seq, name_tc: sJson?.data?.name_tc || `第 ${s.seq} 站` };
+                        } catch {
+                            return { stopId: s.stop, seq: s.seq, name_tc: `第 ${s.seq} 站` };
+                        }
+                    }));
+
+                    liveSearchContext.stops = detailedStops;
+                    stopSelect.innerHTML = detailedStops.map((st, i) =>
+                        `<option value="${i}">${st.seq}. ${st.name_tc}</option>`
+                    ).join('');
+                    statusEl.textContent = `✅ 已載入城巴 ${liveSearchContext.route} 號線車站，請揀選你上車的一站。`;
+                } else {
+                    const res = await fetch(`https://data.etagmb.gov.hk/route-stop/${chosenDir.gmbRouteId}/${chosenDir.routeSeq}`);
+                    const json = await res.json();
+                    const stops = json?.data?.route_stops || [];
+                    liveSearchContext.stops = stops;
+
+                    stopSelect.innerHTML = stops.map((st, i) =>
+                        `<option value="${i}">${st.stop_seq}. ${st.name_tc}</option>`
+                    ).join('');
+                    statusEl.textContent = `✅ 已載入專線小巴 ${liveSearchContext.route} 號線車站。`;
+                }
+            } catch (e) {
+                statusEl.textContent = '⚠️ 載入車站失敗，請重試。';
+            }
+        }
+
+        function addSelectedLiveRoute() {
+            const dirIdx = Number(document.getElementById('live-direction-select').value || 0);
+            const stopIdx = Number(document.getElementById('live-stop-select').value || 0);
+            const chosenDir = liveSearchContext.directions[dirIdx];
+            const chosenStop = liveSearchContext.stops[stopIdx];
+
+            if (!chosenDir || !chosenStop) return;
+
+            if (liveSearchContext.operator === 'KMB' || liveSearchContext.operator === 'CTB') {
+                state.routes.unshift({
+                    id: 'r_' + Date.now(),
+                    operator: liveSearchContext.operator,
+                    route: liveSearchContext.route,
+                    dest: chosenDir.dest_tc,
+                    stopName: chosenStop.name_tc,
+                    stopId: chosenStop.stopId,
+                    dir: chosenDir.code,
+                    isLiveApi: true,
+                    freq: 8,
+                    offset: 2
+                });
+            } else {
+                state.routes.unshift({
+                    id: 'r_' + Date.now(),
+                    operator: 'GMB',
+                    route: liveSearchContext.route,
+                    dest: chosenDir.dest_tc,
+                    stopName: chosenStop.name_tc,
+                    gmbRouteId: chosenDir.gmbRouteId,
+                    gmbRouteSeq: chosenDir.routeSeq,
+                    gmbStopSeq: chosenStop.stop_seq,
+                    isLiveApi: true,
+                    freq: 7,
+                    offset: 1
+                });
+            }
+
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(false);
+            showToast(`已加入實時路線 ${liveSearchContext.route}`);
+        }
+
+        function addCustomRoute() {
+            const op = document.getElementById('custom-op').value;
+            const route = document.getElementById('custom-route').value.trim().toUpperCase();
+            const dest = document.getElementById('custom-dest').value.trim() || '市中心 / 港鐵站';
+            const stopName = document.getElementById('custom-stop').value.trim() || '屋苑門外車站';
+            const freq = Number(document.getElementById('custom-freq').value) || 8;
+
+            if (!route) {
+                showToast('請輸入路線號碼');
+                return;
+            }
+
+            state.routes.unshift({
+                id: 'r_' + Date.now(),
+                operator: op,
+                route,
+                dest,
+                stopName,
+                isLiveApi: false,
+                freq,
+                offset: Math.floor(Math.random() * freq)
+            });
+
+            document.getElementById('custom-route').value = '';
+            document.getElementById('custom-dest').value = '';
+            document.getElementById('custom-stop').value = '';
+
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(false);
+            showToast(`已新增路線 ${route}`);
+        }
+
+        function renderSavedRoutesInModal() {
+            document.getElementById('saved-route-count').textContent = state.routes.length;
+            const list = document.getElementById('modal-saved-routes-list');
+            list.innerHTML = state.routes.map((r, index) => {
+                const meta = OPERATOR_META[r.operator] || OPERATOR_META.KMB;
+                return `
+                    <div class="surface-pill rounded-2xl p-3 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${meta.badgeClass}">${meta.label}</span>
+                            <span class="font-mono-num font-extrabold text-base">${r.route}</span>
+                            <span class="text-xs opacity-80 truncate">往 ${r.dest} · ${r.stopName}</span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            ${index > 0 ? `<button onclick="moveRouteUp(${index})" class="p-1.5 rounded-lg hover:bg-white/10" title="上移"><i data-lucide="arrow-up" class="w-3.5 h-3.5"></i></button>` : ''}
+                            <button onclick="deleteRoute('${r.id}')" class="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20" title="刪除">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function moveRouteUp(idx) {
+            if (idx <= 0) return;
+            const temp = state.routes[idx - 1];
+            state.routes[idx - 1] = state.routes[idx];
+            state.routes[idx] = temp;
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(false);
+        }
+
+        function deleteRoute(id) {
+            state.routes = state.routes.filter(r => r.id !== id);
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(false);
+        }
+
+        function resetDefaultRoutes() {
+            state.routes = JSON.parse(JSON.stringify(DEFAULT_ROUTES));
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(true);
+        }
+
+        const DAY_NAMES_SHORT = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+        const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Monday to Sunday
+
+        function renderWeeklySchedule() {
+            const todayDayNum = new Date().getDay();
+            const stripEl = document.getElementById('weekly-day-strip');
+
+            // Build '全週' + Mon..Sun strip
+            let stripHtml = `
+                <button onclick="selectWeekDayFilter('ALL')"
+                    class="py-2 rounded-2xl flex flex-col items-center justify-center text-xs font-extrabold transition ${
+                        state.selectedWeekDay === 'ALL'
+                            ? 'bg-violet-500 text-white shadow-sm'
+                            : 'surface-pill opacity-70 hover:opacity-100'
+                    }">
+                    <span>全週</span>
+                    <span class="text-[10px] opacity-75 mt-0.5">${state.events.length}項</span>
+                </button>
+            `;
+
+            stripHtml += DAY_ORDER.map(dayNum => {
+                const isToday = dayNum === todayDayNum;
+                const isSelected = String(state.selectedWeekDay) === String(dayNum);
+                const count = state.events.filter(e => Number(e.day) === dayNum && !e.done).length;
+
+                return `
+                    <button onclick="selectWeekDayFilter('${dayNum}')"
+                        class="py-2 rounded-2xl flex flex-col items-center justify-center text-xs font-bold transition relative ${
+                            isSelected
+                                ? 'bg-violet-500 text-white shadow-sm'
+                                : isToday
+                                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                                    : 'surface-pill opacity-70 hover:opacity-100'
+                        }">
+                        <span class="text-[11px]">${isToday ? '今日' : DAY_NAMES_SHORT[dayNum]}</span>
+                        <div class="flex items-center gap-0.5 mt-1 h-2">
+                            ${count > 0 ? `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-amber-400'}"></span>` : '<span class="text-[9px] opacity-35">-</span>'}
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            stripEl.innerHTML = stripHtml;
+
+            // Render filtered event cards
+            const listEl = document.getElementById('weekly-events-list');
+            const filtered = state.events
+                .filter(e => state.selectedWeekDay === 'ALL' || String(e.day) === String(state.selectedWeekDay))
+                .sort((a, b) => {
+                    if (a.done !== b.done) return a.done ? 1 : -1;
+                    return DAY_ORDER.indexOf(Number(a.day)) - DAY_ORDER.indexOf(Number(b.day));
+                });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="surface-pill rounded-2xl p-8 text-center space-y-2">
+                        <p class="text-sm font-bold opacity-70">此日暫無重要事項 🎉</p>
+                        <button onclick="openEventModal()" class="text-xs text-violet-400 font-bold hover:underline">+ 新增事項提醒屋企人</button>
+                    </div>
+                `;
+            } else {
+                const tagColors = {
+                    '重要': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+                    '屋企': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                    '繳費': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                    '聚會': 'bg-sky-500/20 text-sky-400 border-sky-500/30'
+                };
+
+                listEl.innerHTML = filtered.map(ev => {
+                    const isToday = Number(ev.day) === todayDayNum;
+                    const badgeStyle = tagColors[ev.tag] || tagColors['重要'];
+                    return `
+                        <div class="surface-pill rounded-2xl p-3.5 flex items-start justify-between gap-3 transition ${ev.done ? 'opacity-45' : ''}">
+                            <button onclick="toggleWeeklyEventDone('${ev.id}')" class="mt-0.5 w-5 h-5 rounded-lg border border-current/30 flex items-center justify-center shrink-0 ${ev.done ? 'bg-emerald-500 border-emerald-500 text-slate-950' : ''}">
+                                ${ev.done ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
+                            </button>
+                            <div class="flex-1 min-w-0" onclick="toggleWeeklyEventDone('${ev.id}')">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${badgeStyle}">${ev.tag}</span>
+                                    <span class="text-xs font-extrabold ${isToday ? 'text-sky-400' : 'opacity-70'}">
+                                        ${isToday ? '● 今日 (' + DAY_NAMES_SHORT[ev.day] + ')' : DAY_NAMES_SHORT[ev.day]}
+                                    </span>
+                                    ${ev.time ? `<span class="font-mono-num text-xs opacity-65">${ev.time}</span>` : ''}
+                                </div>
+                                <p class="text-sm font-bold mt-1 leading-snug ${ev.done ? 'line-through' : ''}">${ev.title}</p>
+                            </div>
+                            <button onclick="deleteWeeklyEvent('${ev.id}')" class="opacity-40 hover:opacity-100 hover:text-rose-400 p-1">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const doneCount = state.events.filter(e => e.done).length;
+            document.getElementById('weekly-progress-text').textContent = `本週已完成 ${doneCount} / ${state.events.length} 項`;
+            lucide.createIcons();
+        }
+
+        function selectWeekDayFilter(dayVal) {
+            state.selectedWeekDay = dayVal;
+            renderWeeklySchedule();
+        }
+
+        function toggleWeeklyEventDone(id) {
+            const ev = state.events.find(e => e.id === id);
+            if (ev) {
+                ev.done = !ev.done;
+                saveState();
+                renderWeeklySchedule();
+            }
+        }
+
+        function deleteWeeklyEvent(id) {
+            state.events = state.events.filter(e => e.id !== id);
+            saveState();
+            renderWeeklySchedule();
+        }
+
+        function clearCompletedEvents() {
+            state.events = state.events.filter(e => !e.done);
+            saveState();
+            renderWeeklySchedule();
+            showToast('已清除完成的事項');
+        }
+
+        function openEventModal() {
+            const todayDay = new Date().getDay();
+            document.getElementById('event-day-input').value = String(state.selectedWeekDay !== 'ALL' ? state.selectedWeekDay : todayDay);
+            document.getElementById('event-modal').classList.remove('hidden');
+            document.getElementById('event-modal').classList.add('flex');
+        }
+
+        function closeEventModal() {
+            document.getElementById('event-modal').classList.add('hidden');
+            document.getElementById('event-modal').classList.remove('flex');
+        }
+
+        function selectEventTag(tag) {
+            state.newEventTag = tag;
+            document.querySelectorAll('.event-tag-btn').forEach(btn => {
+                if (btn.getAttribute('data-tag') === tag) {
+                    btn.className = 'event-tag-btn py-2 rounded-xl text-xs font-bold border border-violet-400 bg-violet-500/25 text-violet-200';
+                } else {
+                    btn.className = 'event-tag-btn py-2 rounded-xl text-xs font-bold border border-white/10 opacity-60';
+                }
+            });
+        }
+
+        function saveNewWeeklyEvent() {
+            const title = document.getElementById('event-title-input').value.trim();
+            const day = Number(document.getElementById('event-day-input').value);
+            const time = document.getElementById('event-time-input').value;
+
+            if (!title) {
+                showToast('請輸入事項內容');
+                return;
+            }
+
+            state.events.unshift({
+                id: 'e_' + Date.now(),
+                title,
+                day,
+                time,
+                tag: state.newEventTag || '重要',
+                done: false
+            });
+
+            document.getElementById('event-title-input').value = '';
+            saveState();
+            renderWeeklySchedule();
+            closeEventModal();
+            showToast('已新增本週重要事項');
+        }
+
+        function saveFamilyMemo(val) {
+            state.familyMemo = val;
+            saveState();
+            document.getElementById('memo-saved-hint').textContent = '✓ 已自動儲存';
+        }
+
+        function cycleQuickMemoPreset() {
+            const currentIdx = MEMO_PRESETS.indexOf(state.familyMemo);
+            const nextIdx = (currentIdx + 1) % MEMO_PRESETS.length;
+            state.familyMemo = MEMO_PRESETS[nextIdx];
+            document.getElementById('family-memo-input').value = state.familyMemo;
+            saveState();
+            showToast('已切換玄關溫馨提示');
+        }
+
+        function speakEntrywayBriefing() {
+            if (!('speechSynthesis' in window)) {
+                showToast('此瀏覽器暫不支援語音播報');
+                return;
+            }
+            window.speechSynthesis.cancel();
+
+            const now = new Date();
+            const w = state.lastWeatherSummary || { temp: 26, desc: '天色良好', warnings: [] };
+            const warnText = w.warnings && w.warnings.length > 0 ? `請注意，現正生效警告有${w.warnings.join('及')}。` : '';
+
+            let busText = '';
+            if (state.latestEtasSummary && state.latestEtasSummary.length > 0) {
+                const topRoutes = state.latestEtasSummary.slice(0, 2).map(r => `${r.route}往${r.dest}，${r.leaveAdvice}`);
+                busText = `交通方面，${topRoutes.join('；')}。`;
+            }
+
+            const todayNum = now.getDay();
+            const todayTodoCount = state.events.filter(e => Number(e.day) === todayNum && !e.done).length;
+            const todoText = todayTodoCount > 0 ? `今日你有 ${todayTodoCount} 項重要事項未完成。` : '今日暫時無待辦事項。';
+
+            const fullSpeech = `而家時間係 ${now.getHours()}點${now.getMinutes()}分。${state.district}氣溫 ${w.temp}度，${w.desc}。${warnText}${busText}${todoText}出門前記得帶齊鎖匙、手機同八達通！`;
+
+            const utter = new SpeechSynthesisUtterance(fullSpeech);
+            utter.lang = 'zh-HK';
+            utter.rate = 1.02;
+            window.speechSynthesis.speak(utter);
+            showToast('🔊 正在廣東話播報出門資訊...');
+        }
+
+        function toggleAutoNightSchedule() {
+            state.autoNightMode = !state.autoNightMode;
+            updateAutoNightBtnUI();
+            saveState();
+            showToast(state.autoNightMode ? '已開啟 23:30-06:30 自動夜間低光排程' : '已關閉自動夜間排程');
+        }
+
+        function updateAutoNightBtnUI() {
+            const btn = document.getElementById('auto-night-btn');
+            if (!btn) return;
+            if (state.autoNightMode) {
+                btn.textContent = '已開啟';
+                btn.className = 'px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-500 text-slate-950 shrink-0 transition';
+            } else {
+                btn.textContent = '已關閉';
+                btn.className = 'px-3.5 py-2 rounded-xl text-xs font-extrabold surface-pill opacity-70 shrink-0 transition';
+            }
+        }
+
+        function toggleNightStandby() {
+            const overlay = document.getElementById('night-standby-overlay');
+            if (overlay.classList.contains('hidden')) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            } else {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+        }
+
+        function openIpadGuideModal() {
+            document.getElementById('ipad-guide-modal').classList.remove('hidden');
+            document.getElementById('ipad-guide-modal').classList.add('flex');
+        }
+
+        function closeIpadGuideModal() {
+            document.getElementById('ipad-guide-modal').classList.add('hidden');
+            document.getElementById('ipad-guide-modal').classList.remove('flex');
+        }
+
+        function downloadStandaloneHTML() {
+            try {
+                // Clone current document and ensure modals are closed in the exported file
+                const clone = document.documentElement.cloneNode(true);
+                ['route-modal', 'event-modal', 'ipad-guide-modal', 'title-modal', 'night-standby-overlay'].forEach(id => {
+                    const el = clone.querySelector('#' + id);
+                    if (el) {
+                        el.classList.add('hidden');
+                        el.classList.remove('flex');
+                    }
+                });
+
+                const exportState = JSON.stringify(state);
+                let htmlContent = '<!DOCTYPE html>\n' + clone.outerHTML;
+                htmlContent = htmlContent.replace(
+                    '/*__PRELOADED_STATE_ANCHOR__*/',
+                    `window.__PRELOADED_STATE__ = ${exportState};\n        /*__PRELOADED_STATE_ANCHOR__*/`
+                );
+
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'index.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('✅ 已下載 index.html（已內置你目前所有路線與設定）');
+            } catch (e) {
+                showToast('下載失敗，請使用複製設定碼功能');
+            }
+        }
+
+        function copyConfigSyncCode() {
+            try {
+                const code = btoa(encodeURIComponent(JSON.stringify(state)));
+                const tempInput = document.createElement('textarea');
+                tempInput.value = code;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                showToast('📋 已複製設定碼！可喺 iPad 點擊「匯入設定碼」貼上同步');
+            } catch (e) {
+                showToast('複製失敗');
+            }
+        }
+
+        function toggleImportConfigBox() {
+            const box = document.getElementById('import-config-box');
+            box.classList.toggle('hidden');
+        }
+
+        function applyImportedConfig() {
+            const rawCode = document.getElementById('import-config-input').value.trim();
+            if (!rawCode) {
+                showToast('請先貼上設定碼');
+                return;
+            }
+            try {
+                const decoded = JSON.parse(decodeURIComponent(atob(rawCode)));
+                state = { ...state, ...decoded };
+                saveState();
+                setTheme(state.theme || 'dark');
+                document.getElementById('hub-title-text').textContent = state.hubTitle;
+                document.getElementById('district-select').value = state.district;
+                document.getElementById('family-memo-input').value = state.familyMemo;
+                updateAutoNightBtnUI();
+                renderChecklistBar();
+                setTransportFilter(state.transportFilter || 'ALL');
+                renderWeeklySchedule();
+                fetchWeatherData(false);
+                document.getElementById('import-config-box').classList.add('hidden');
+                showToast('🎉 成功同步晒所有路線同玄關設定！');
+            } catch (e) {
+                showToast('❌ 設定碼格式不正確，請重新複製');
+            }
+        }
+
+        async function requestFullScreenAndWakeLock() {
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                }
+            } catch (e) {}
+
+            try {
+                if ('wakeLock' in navigator) {
+                    await navigator.wakeLock.request('screen');
+                }
+            } catch (e) {}
+
+            closeIpadGuideModal();
+            showToast('已啟動全螢幕及防休眠長亮模式');
+        }
+
+        function openTitleModal() {
+            document.getElementById('hub-title-input').value = state.hubTitle;
+            document.getElementById('title-modal').classList.remove('hidden');
+            document.getElementById('title-modal').classList.add('flex');
+        }
+
+        function closeTitleModal() {
+            document.getElementById('title-modal').classList.add('hidden');
+            document.getElementById('title-modal').classList.remove('flex');
+        }
+
+        function saveHubTitle() {
+            const val = document.getElementById('hub-title-input').value.trim();
+            if (val) {
+                state.hubTitle = val;
+                document.getElementById('hub-title-text').textContent = val;
+                saveState();
+            }
+            closeTitleModal();
+        }
+
+        window.onload = function () {
+            loadState();
+
+            // Apply initial state to UI
+            setTheme(state.theme || 'dark');
+            document.getElementById('hub-title-text').textContent = state.hubTitle;
+            document.getElementById('district-select').value = state.district;
+            document.getElementById('family-memo-input').value = state.familyMemo;
+            updateAutoNightBtnUI();
+
+            updateClock();
+            renderChecklistBar();
+            setTransportFilter(state.transportFilter || 'ALL');
+            renderWeeklySchedule();
+            fetchWeatherData(false);
+
+            // Auto-refresh timers
+            setInterval(updateClock, 1000);
+            setInterval(() => refreshAllTransportETAs(false), 30000); // Update bus/minibus ETA every 30s
+            setInterval(() => fetchWeatherData(false), 600000); // Update weather every 10 mins
+
+            lucide.createIcons();
+        };
+    </script>
 </body>
 </html>

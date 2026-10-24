@@ -200,18 +200,18 @@
         </div>
     </header>
 
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-h-0">
+    <main id="main-bento-grid" class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 min-h-0">
 
-        <!-- COLUMN 1: Weather & Family Memo (3.5 -> 4 cols on 12-col grid) -->
-        <section class="lg:col-span-4 flex flex-col gap-3.5 min-h-0">
+        <!-- COLUMN 1: Weather & Family Memo (Compact 3 cols on iPad Landscape so Bus Board gets 6 cols!) -->
+        <section id="col-weather" class="md:col-span-4 lg:col-span-3 flex flex-col gap-3 min-h-0">
             
             <!-- Weather Card -->
-            <div class="bento-card rounded-3xl p-5 flex flex-col justify-between relative overflow-hidden shrink-0">
+            <div class="bento-card rounded-3xl p-4 flex flex-col justify-between relative overflow-hidden shrink-0">
                 <!-- Top row: District selector & HKO status -->
                 <div class="flex items-center justify-between gap-2 z-10">
                     <div class="flex items-center gap-1.5">
                         <i data-lucide="map-pin" class="w-4 h-4 text-sky-400"></i>
-                        <select id="district-select" onchange="changeWeatherDistrict(this.value)" class="bg-transparent font-bold text-sm sm:text-base focus:outline-none cursor-pointer pr-1">
+                        <select id="district-select" onchange="changeWeatherDistrict(this.value)" class="bg-transparent font-bold text-sm focus:outline-none cursor-pointer pr-1">
                             <option value="香港天文台" class="bg-slate-900 text-white">香港天文台</option>
                             <option value="沙田" class="bg-slate-900 text-white">沙田</option>
                             <option value="大埔" class="bg-slate-900 text-white">大埔</option>
@@ -226,180 +226,202 @@
                             <option value="黃竹坑" class="bg-slate-900 text-white">南區 / 黃竹坑</option>
                         </select>
                     </div>
-                    <button onclick="fetchWeatherData(true)" class="text-xs opacity-60 hover:opacity-100 flex items-center gap-1 transition" title="更新香港天文台數據">
-                        <span id="weather-source-badge">香港天文台實時</span>
+                    <button onclick="fetchWeatherData(true)" class="text-[11px] opacity-60 hover:opacity-100 flex items-center gap-1 transition" title="更新香港天文台數據">
+                        <span id="weather-source-badge">天文台實時</span>
                         <i data-lucide="refresh-cw" id="weather-refresh-icon" class="w-3 h-3"></i>
                     </button>
                 </div>
 
                 <!-- Active HKO Warnings Banner -->
-                <div id="weather-warnings-bar" class="mt-2.5 flex flex-wrap gap-1.5 z-10 empty:hidden"></div>
+                <div id="weather-warnings-bar" class="mt-2 flex flex-wrap gap-1.5 z-10 empty:hidden"></div>
 
                 <!-- Main Temperature & Advice -->
-                <div class="my-3.5 flex items-center justify-between gap-4 z-10">
+                <div class="my-2.5 flex items-center justify-between gap-3 z-10">
                     <div>
                         <div class="flex items-start">
-                            <span id="weather-temp" class="font-mono-num text-5xl sm:text-6xl font-extrabold tracking-tighter">26</span>
-                            <span class="text-2xl font-bold mt-1">°C</span>
+                            <span id="weather-temp" class="font-mono-num text-4xl xl:text-5xl font-extrabold tracking-tighter">26</span>
+                            <span class="text-xl font-bold mt-1">°C</span>
                         </div>
-                        <p id="weather-desc" class="text-sm font-semibold mt-1 opacity-90">部分時間有陽光 · 乾燥</p>
-                        <div id="weather-umbrella-tip" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-sky-500/15 text-sky-400 border border-sky-500/25">
-                            <i data-lucide="sun-medium" class="w-3.5 h-3.5"></i>
-                            <span>出門指數：天色良好，不用帶遮</span>
+                        <p id="weather-desc" class="text-xs font-semibold mt-0.5 opacity-90">部分時間有陽光 · 乾燥</p>
+                        <div id="weather-umbrella-tip" class="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[11px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/25">
+                            <i data-lucide="sun-medium" class="w-3 h-3"></i>
+                            <span>天色良好，不用帶遮</span>
                         </div>
                     </div>
-                    <div id="weather-hero-icon" class="w-20 h-20 rounded-3xl surface-pill flex items-center justify-center shrink-0">
-                        <i data-lucide="cloud-sun" class="w-11 h-11 text-amber-400"></i>
+                    <div id="weather-hero-icon" class="w-14 h-14 xl:w-16 xl:h-16 rounded-2xl surface-pill flex items-center justify-center shrink-0">
+                        <i data-lucide="cloud-sun" class="w-9 h-9 text-amber-400"></i>
                     </div>
                 </div>
 
                 <!-- Metrics Strip (Humidity, UV, Temp Range) -->
-                <div class="grid grid-cols-3 gap-2 pt-3 border-t border-current/10 text-xs z-10">
-                    <div class="surface-pill rounded-2xl p-2.5 flex flex-col">
-                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="droplets" class="w-3 h-3 text-sky-400"></i>相對濕度</span>
-                        <span id="weather-humidity" class="font-mono-num text-base font-bold mt-0.5">68%</span>
+                <div class="grid grid-cols-3 gap-1.5 pt-2.5 border-t border-current/10 text-[11px] z-10">
+                    <div class="surface-pill rounded-xl p-2 flex flex-col">
+                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="droplets" class="w-3 h-3 text-sky-400"></i>濕度</span>
+                        <span id="weather-humidity" class="font-mono-num text-sm font-bold mt-0.5">68%</span>
                     </div>
-                    <div class="surface-pill rounded-2xl p-2.5 flex flex-col">
-                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="thermometer" class="w-3 h-3 text-rose-400"></i>今日高低</span>
-                        <span id="weather-range" class="font-mono-num text-base font-bold mt-0.5">23° / 28°</span>
+                    <div class="surface-pill rounded-xl p-2 flex flex-col">
+                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="thermometer" class="w-3 h-3 text-rose-400"></i>高低</span>
+                        <span id="weather-range" class="font-mono-num text-sm font-bold mt-0.5">23°/28°</span>
                     </div>
-                    <div class="surface-pill rounded-2xl p-2.5 flex flex-col">
-                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="flame" class="w-3 h-3 text-amber-400"></i>紫外線指數</span>
-                        <span id="weather-uv" class="font-mono-num text-base font-bold mt-0.5">5 (中)</span>
+                    <div class="surface-pill rounded-xl p-2 flex flex-col">
+                        <span class="opacity-60 flex items-center gap-1"><i data-lucide="flame" class="w-3 h-3 text-amber-400"></i>UV</span>
+                        <span id="weather-uv" class="font-mono-num text-sm font-bold mt-0.5">5 (中)</span>
                     </div>
                 </div>
 
                 <!-- 5-Day Mini Forecast -->
-                <div id="weather-forecast-row" class="grid grid-cols-5 gap-1.5 mt-3 pt-3 border-t border-current/10 text-center z-10">
+                <div id="weather-forecast-row" class="grid grid-cols-5 gap-1 mt-2.5 pt-2.5 border-t border-current/10 text-center z-10">
                     <!-- Populated by JS -->
                 </div>
             </div>
 
             <!-- Family Sticky Note / Entryway Memo Card -->
-            <div class="bento-card rounded-3xl p-5 flex-1 flex flex-col justify-between min-h-[170px]">
+            <div class="bento-card rounded-3xl p-4 flex-1 flex flex-col justify-between min-h-[140px]">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                            <i data-lucide="message-square-heart" class="w-4 h-4"></i>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                            <i data-lucide="message-square-heart" class="w-3.5 h-3.5"></i>
                         </span>
-                        <div>
-                            <h2 class="text-sm font-bold tracking-wide">玄關留言板 · FAMILY MEMO</h2>
-                        </div>
+                        <h2 class="text-xs sm:text-sm font-bold tracking-wide">玄關留言板 · MEMO</h2>
                     </div>
-                    <span id="memo-saved-hint" class="text-[11px] opacity-50">點擊文字直接修改</span>
+                    <span id="memo-saved-hint" class="text-[10px] opacity-50">直接點擊修改</span>
                 </div>
 
-                <textarea id="family-memo-input" oninput="saveFamilyMemo(this.value)" rows="3"
-                    class="w-full flex-1 mt-3 bg-transparent resize-none focus:outline-none text-sm sm:text-base font-medium leading-relaxed placeholder:opacity-40"
+                <textarea id="family-memo-input" oninput="saveFamilyMemo(this.value)" rows="2"
+                    class="w-full flex-1 mt-2 bg-transparent resize-none focus:outline-none text-xs sm:text-sm font-medium leading-relaxed placeholder:opacity-40"
                     placeholder="輸入給屋企人或自己出門前的提醒..."></textarea>
 
-                <div class="flex items-center justify-between pt-2.5 border-t border-current/10 text-xs opacity-75">
-                    <div class="flex items-center gap-1.5">
-                        <i data-lucide="wifi" class="w-3.5 h-3.5 text-emerald-400"></i>
-                        <span>玄關資訊版連線正常</span>
+                <div class="flex items-center justify-between pt-2 border-t border-current/10 text-[11px] opacity-75">
+                    <div class="flex items-center gap-1">
+                        <i data-lucide="wifi" class="w-3 h-3 text-emerald-400"></i>
+                        <span>連線正常</span>
                     </div>
                     <button onclick="cycleQuickMemoPreset()" class="hover:underline flex items-center gap-1 text-amber-400 font-semibold">
-                        <i data-lucide="wand-2" class="w-3 h-3"></i>換句溫馨提示
+                        <i data-lucide="wand-2" class="w-3 h-3"></i>換句提示
                     </button>
                 </div>
             </div>
         </section>
 
-        <section class="lg:col-span-4 bento-card rounded-3xl p-5 flex flex-col min-h-[420px] lg:min-h-0">
+        <!-- COLUMN 2 (HERO): Expanded iPad Bus & Minibus Hub (6 cols on iPad Landscape = 50% screen width!) -->
+        <section id="col-transport" class="md:col-span-8 lg:col-span-6 bento-card rounded-3xl p-4 sm:p-5 flex flex-col min-h-[460px] md:min-h-0">
             <!-- Header -->
-            <div class="flex items-center justify-between gap-2 pb-3.5 border-b border-current/10 shrink-0">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-current/10 shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                    <div class="w-9 h-9 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
                         <i data-lucide="bus" class="w-5 h-5"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-base sm:text-lg font-extrabold tracking-tight">巴士 · 小巴到站時間</h2>
+                            <h2 class="text-base sm:text-lg font-extrabold tracking-tight">巴士 · 小巴實時到站</h2>
+                            <span id="eta-route-count-badge" class="px-2 py-0.5 rounded-full text-[11px] font-mono-num font-bold bg-sky-500/15 text-sky-400">0 條路線</span>
                         </div>
-                        <div class="text-xs flex items-center gap-1.5 mt-0.5">
+                        <div class="text-xs flex items-center gap-1.5 mt-0.5 flex-wrap">
                             <button onclick="cycleWalkBuffer()" class="px-2 py-0.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30 font-bold hover:bg-sky-500/25 transition flex items-center gap-1" title="點擊更改由屋企出門、等𨋢到行去車站所需時間">
                                 <i data-lucide="footprints" class="w-3 h-3"></i>
                                 <span>連等𨋢步程：<span id="walk-buffer-label">4</span>分鐘</span>
                             </button>
-                            <span class="opacity-50">·</span>
+                            <span class="opacity-40">·</span>
                             <span id="eta-last-updated" class="opacity-60">剛剛更新</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 ml-auto">
+                    <!-- Grid Density Toggle (2-Col Compact vs 1-Col Large for iPad) -->
+                    <button onclick="toggleTransportGridCols()" id="eta-grid-toggle-btn" class="surface-pill px-2.5 py-2 rounded-xl text-xs font-bold hover:opacity-90 transition flex items-center gap-1" title="切換雙欄並排（一次睇 8-10 條線）或單欄大字模式">
+                        <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-sky-400"></i>
+                        <span id="eta-grid-toggle-text" class="hidden sm:inline">雙欄多線</span>
+                    </button>
                     <button onclick="refreshAllTransportETAs(true)" class="surface-pill p-2 rounded-xl hover:opacity-80 transition" title="立即刷新到站時間">
                         <i data-lucide="rotate-cw" id="eta-refresh-icon" class="w-4 h-4"></i>
                     </button>
-                    <button onclick="openRouteManagerModal()" class="px-3 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1 transition shadow-sm">
-                        <i data-lucide="SlidersHorizontal" class="w-3.5 h-3.5"></i>
-                        <span>揀路線</span>
+                    <button onclick="openRouteManagerModal()" class="px-3 py-2 rounded-xl text-xs font-extrabold bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1 transition shadow-sm">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                        <span>揀路線 / 組合</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Filter Pills -->
-            <div class="flex items-center justify-between gap-2 my-3 shrink-0">
-                <div class="flex items-center gap-1.5">
-                    <button onclick="setTransportFilter('ALL')" id="filter-trans-ALL" class="px-3 py-1 rounded-xl text-xs font-bold transition">全部</button>
-                    <button onclick="setTransportFilter('BUS')" id="filter-trans-BUS" class="px-3 py-1 rounded-xl text-xs font-bold transition">巴士 (九巴/城巴)</button>
-                    <button onclick="setTransportFilter('MINIBUS')" id="filter-trans-MINIBUS" class="px-3 py-1 rounded-xl text-xs font-bold transition">專線小巴 / 邨巴</button>
+            <!-- PRESET ROUTE GROUPS BAR (One-tap switching on HTML main view!) -->
+            <div class="mt-2.5 pb-2 border-b border-current/10 shrink-0">
+                <div class="flex items-center gap-1.5 overflow-x-auto py-0.5" id="transport-preset-bar">
+                    <!-- Populated by JS: e.g. 全部路線 | 💼 平日返工 | 🚇 港鐵駁腳 | 🛍️ 放假出街 | + 新組合 -->
                 </div>
-                <span class="text-[11px] opacity-55 hidden sm:inline">橙燈 = 5分鐘內</span>
             </div>
 
-            <!-- ETA Cards List -->
-            <div id="transport-eta-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+            <!-- Secondary Filter Pills (All / Bus / Minibus) -->
+            <div class="flex items-center justify-between gap-2 my-2 shrink-0">
+                <div class="flex items-center gap-1.5">
+                    <button onclick="setTransportFilter('ALL')" id="filter-trans-ALL" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition">全部工具</button>
+                    <button onclick="setTransportFilter('BUS')" id="filter-trans-BUS" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition">巴士 (九巴/城巴)</button>
+                    <button onclick="setTransportFilter('MINIBUS')" id="filter-trans-MINIBUS" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition">小巴 / 邨巴</button>
+                </div>
+                <span class="text-[11px] opacity-55 hidden sm:inline">點擊卡片可置頂 · 紅燈 = 立即出門</span>
+            </div>
+
+            <!-- ETA Cards Grid (Supports 2-column dense display on iPad so 8-10 routes fit simultaneously!) -->
+            <div id="transport-eta-list" class="flex-1 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 content-start">
                 <!-- Populated by JS -->
             </div>
         </section>
 
-        <section class="lg:col-span-4 bento-card rounded-3xl p-5 flex flex-col min-h-[420px] lg:min-h-0">
+        <!-- COLUMN 3: Weekly Schedule & TimeTree Sync (3 cols on iPad Landscape) -->
+        <section id="col-schedule" class="md:col-span-12 lg:col-span-3 bento-card rounded-3xl p-4 flex flex-col min-h-[380px] lg:min-h-0">
             <!-- Header -->
-            <div class="flex items-center justify-between gap-2 pb-3.5 border-b border-current/10 shrink-0">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-2xl bg-violet-500/20 text-violet-400 flex items-center justify-center">
-                        <i data-lucide="calendar-check-2" class="w-5 h-5"></i>
+            <div class="flex items-center justify-between gap-2 pb-3 border-b border-current/10 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-2xl bg-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
+                        <i data-lucide="calendar-check-2" class="w-4 h-4"></i>
                     </div>
                     <div>
-                        <h2 class="text-base sm:text-lg font-extrabold tracking-tight">本週重要事項</h2>
-                        <p id="week-range-label" class="text-xs opacity-60">本週日程與重要提醒</p>
+                        <h2 class="text-sm sm:text-base font-extrabold tracking-tight">本週重要事項</h2>
+                        <p id="week-range-label" class="text-[11px] opacity-60">日程與 TimeTree 同步</p>
                     </div>
                 </div>
 
-                <button onclick="openEventModal()" class="px-3 py-2 rounded-xl text-xs font-bold bg-violet-500 hover:bg-violet-400 text-white flex items-center gap-1 transition shadow-sm">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    <span>新增事項</span>
-                </button>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="openTimeTreeModal()" class="px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition" title="同步 TimeTree 或 iCal 日曆時間表">
+                        <i data-lucide="calendar-sync" class="w-3.5 h-3.5"></i>
+                        <span>TimeTree</span>
+                    </button>
+                    <button onclick="openEventModal()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-violet-500 hover:bg-violet-400 text-white flex items-center gap-1 transition shadow-sm">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>新增</span>
+                    </button>
+                </div>
             </div>
 
             <!-- 7-Day Interactive Strip (Mon - Sun + All Week) -->
-            <div class="my-3 shrink-0">
+            <div class="my-2.5 shrink-0">
                 <div class="grid grid-cols-8 gap-1" id="weekly-day-strip">
                     <!-- Populated by JS: '全週' + Mon to Sun -->
                 </div>
             </div>
 
             <!-- Events List -->
-            <div id="weekly-events-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+            <div id="weekly-events-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
                 <!-- Populated by JS -->
             </div>
 
             <!-- Footer summary -->
-            <div class="pt-3 mt-2 border-t border-current/10 flex items-center justify-between text-xs opacity-65 shrink-0">
+            <div class="pt-2.5 mt-2 border-t border-current/10 flex items-center justify-between text-[11px] opacity-65 shrink-0">
                 <span id="weekly-progress-text">本週已完成 0 / 0 項</span>
-                <button onclick="clearCompletedEvents()" class="hover:underline hover:opacity-100">清除已完成項目</button>
+                <button onclick="clearCompletedEvents()" class="hover:underline hover:opacity-100">清除已完成</button>
             </div>
         </section>
     </main>
 
     <div id="route-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
-        <div class="bento-card rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-white/15">
+        <div class="bento-card rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden border border-white/15">
             <!-- Modal Header -->
-            <div class="p-5 border-b border-current/10 flex items-center justify-between">
+            <div class="p-4 sm:p-5 border-b border-current/10 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
                     <i data-lucide="bus-front" class="w-5 h-5 text-sky-400"></i>
-                    <h3 class="text-lg font-extrabold">自訂玄關巴士 · 小巴路線</h3>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold">自訂玄關巴士 · 小巴路線 & 路線組合 (Presets)</h3>
+                        <p class="text-xs opacity-65">設定不同出門情境組合（如：平日返工、放假出街、老公/老婆路線），在主畫面一鍵切換</p>
+                    </div>
                 </div>
                 <button onclick="closeRouteManagerModal()" class="surface-pill p-2 rounded-xl hover:opacity-80">
                     <i data-lucide="x" class="w-4 h-4"></i>
@@ -407,11 +429,36 @@
             </div>
 
             <!-- Modal Body -->
-            <div class="p-5 overflow-y-auto space-y-5 flex-1">
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1">
+
+                <!-- PRESET GROUPS MANAGER -->
+                <div class="surface-pill rounded-2xl p-4 space-y-3 border border-sky-500/25">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="text-xs sm:text-sm font-extrabold text-sky-400 flex items-center gap-1.5">
+                            <i data-lucide="folders" class="w-4 h-4"></i>
+                            <span>管理「路線組合 Preset」按鈕（主畫面一鍵切換）</span>
+                        </div>
+                        <span class="text-[11px] opacity-65">喺下方路線卡片撳標籤即可將路線編入唔同組合</span>
+                    </div>
+                    <!-- Existing Presets List -->
+                    <div id="modal-presets-list" class="flex flex-wrap gap-2">
+                        <!-- Populated by JS -->
+                    </div>
+                    <!-- Add New Preset Row -->
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="text" id="new-preset-name-input" placeholder="新增組合名稱（例如：👨 爸爸返工 / 👵 飲茶買餸 / 🌧️ 落雨備用）"
+                            class="flex-1 px-3 py-2 rounded-xl bg-slate-900/90 text-white border border-white/15 text-xs sm:text-sm font-bold focus:outline-none focus:border-sky-400">
+                        <button onclick="addNewRoutePreset()" class="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs sm:text-sm shrink-0 flex items-center gap-1">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>新增組合</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Mode Switch Tabs -->
                 <div class="grid grid-cols-2 gap-2 surface-pill p-1.5 rounded-2xl">
                     <button onclick="switchRouteAddTab('LIVE_KMB')" id="tab-route-live" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition bg-sky-500 text-slate-950">
-                        📡 香港實時資料庫搜尋 (九巴/小巴)
+                        📡 香港實時資料庫搜尋 (九巴/城巴/小巴)
                     </button>
                     <button onclick="switchRouteAddTab('CUSTOM')" id="tab-route-custom" class="py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition opacity-70">
                         ✍️ 手動新增 (任何巴士/綠Van/紅Van/邨巴)
@@ -456,7 +503,7 @@
                             <span>加入玄關看板 (實時連線)</span>
                         </button>
                     </div>
-                    <p id="live-search-status" class="text-xs opacity-65">💡 直接連線政府數據一線通 (data.gov.hk) 獲取九巴及專線小巴實時預計到站時間。</p>
+                    <p id="live-search-status" class="text-xs opacity-65">💡 直接連線政府數據一線通 (data.gov.hk) 獲取九巴、城巴及專線小巴實時預計到站時間。</p>
                 </div>
 
                 <!-- Tab 2: Manual / Custom Route Builder -->
@@ -497,14 +544,86 @@
                     </button>
                 </div>
 
-                <!-- Current Saved Routes List -->
+                <!-- Current Saved Routes List & Preset Assignment -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-xs font-bold uppercase tracking-wider opacity-65">已釘選在玄關的路線 (<span id="saved-route-count">0</span>)</h4>
-                        <button onclick="resetDefaultRoutes()" class="text-xs text-sky-400 hover:underline">還原預設範例</button>
+                        <h4 class="text-xs font-bold uppercase tracking-wider opacity-65">已儲存路線及所屬組合 (<span id="saved-route-count">0</span>) — 點擊標籤可加入/移出組合</h4>
+                        <button onclick="resetDefaultRoutes()" class="text-xs text-sky-400 hover:underline">還原預設範例 (8條線)</button>
                     </div>
-                    <div id="modal-saved-routes-list" class="space-y-2">
+                    <div id="modal-saved-routes-list" class="space-y-2.5">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMETREE & ICAL CALENDAR SYNC MODAL -->
+    <div id="timetree-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bento-card rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-white/15">
+            <div class="p-5 border-b border-current/10 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                        <i data-lucide="calendar-sync" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold">同步 TimeTree 時間表 / iCal 日曆</h3>
+                        <p class="text-xs opacity-65">將你同屋企人喺 TimeTree 嘅本週行程自動顯示喺玄關版</p>
+                    </div>
+                </div>
+                <button onclick="closeTimeTreeModal()" class="surface-pill p-2 rounded-xl hover:opacity-80">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 text-sm flex-1">
+                <!-- Method 1: Live iCal (.ics) Subscription URL -->
+                <div class="surface-pill rounded-2xl p-4 space-y-3 border border-emerald-500/30">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="font-extrabold text-emerald-400 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 text-xs font-extrabold flex items-center justify-center">1</span>
+                            <span>方法 A：透過 iCal (.ics) 網址自動同步（最推薦・全自動更新）</span>
+                        </div>
+                        <span id="ics-sync-status-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-bold">支援實時拉取</span>
+                    </div>
+                    <div class="text-xs opacity-85 space-y-1 bg-black/20 p-3 rounded-xl border border-white/10">
+                        <p class="font-bold text-amber-300">📱 點樣拎 TimeTree 嘅同步網址？</p>
+                        <p>1. 打開手機 <strong>TimeTree App</strong> ➔ 點左上角選單 ➔ <strong>「應用程式設定」➔「輸出至外部日曆 (與 Apple / Google 日曆同步)」</strong>。</p>
+                        <p>2. 開啟後，喺 Google Calendar（設定 ➔ 整合日曆 ➔ 複製「iCal 格式私密網址 `.ics`」）或 iCloud 日曆（開啟公開日曆複製 `webcal://` 連結）貼落下面：</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="url" id="timetree-ics-url-input" placeholder="貼上 https://... 或 webcal://... (.ics 日曆網址)"
+                            class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 text-white border border-white/15 text-xs font-mono focus:outline-none focus:border-emerald-400">
+                        <button onclick="syncFromIcsUrl(true)" id="ics-sync-btn" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm shrink-0 flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="refresh-cw" id="ics-sync-icon" class="w-4 h-4"></i>
+                            <span>立即同步日曆</span>
+                        </button>
+                    </div>
+                    <p id="ics-sync-feedback" class="text-xs opacity-65">💡 儲存網址後，每次打開玄關版或每 30 分鐘會自動更新本週最新行程（亦可一鍵打包入 `index.html`）。</p>
+                </div>
+
+                <!-- Method 2: Upload .ics file OR Paste TimeTree Shared Text -->
+                <div class="surface-pill rounded-2xl p-4 space-y-3">
+                    <div class="font-extrabold text-sky-400 flex items-center gap-1.5">
+                        <span class="w-5 h-5 rounded-full bg-sky-400 text-slate-950 text-xs font-extrabold flex items-center justify-center">2</span>
+                        <span>方法 B：直接貼上 TimeTree「分享文字」或匯入 `.ics` 檔案</span>
+                    </div>
+                    <p class="text-xs opacity-80">喺 TimeTree 揀選行程撳「分享 (Share)」複製文字貼落下面，或者直接揀選匯出嘅 `.ics` 日曆檔，系統會自動識別星期幾同時間：</p>
+
+                    <textarea id="timetree-paste-input" rows="3"
+                        placeholder="直接貼上 TimeTree 複製出嚟嘅行程文字，例如：&#10;週一 19:00 同屋企人食飯&#10;10月28日 (週三) 14:30 順豐上門收件&#10;星期五 20:00 睇戲"
+                        class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 text-white border border-white/15 text-xs leading-relaxed focus:outline-none focus:border-sky-400"></textarea>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="parsePastedTimeTreeText()" class="flex-1 py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>智能識別文字並加入本週事項</span>
+                        </button>
+                        <label class="py-2.5 px-4 rounded-xl surface-pill hover:opacity-90 font-bold text-xs flex items-center gap-1.5 cursor-pointer">
+                            <i data-lucide="file-up" class="w-4 h-4 text-emerald-400"></i>
+                            <span>匯入 .ics 日曆檔</span>
+                            <input type="file" accept=".ics,text/calendar" onchange="handleIcsFileUpload(event)" class="hidden">
+                        </label>
                     </div>
                 </div>
             </div>
@@ -692,6 +811,13 @@
     <script>
         const STORAGE_KEY = 'HK_ENTRYWAY_HUB_V1';
 
+        const DEFAULT_PRESETS = [
+            { id: 'ALL', name: '全部路線' },
+            { id: 'work', name: '💼 平日返工' },
+            { id: 'mtr', name: '🚇 港鐵駁腳' },
+            { id: 'holiday', name: '🛍️ 放假出街' }
+        ];
+
         const DEFAULT_ROUTES = [
             {
                 id: 'r1',
@@ -702,7 +828,8 @@
                 stopId: 'B32F254789C6D511',
                 isLiveApi: false,
                 freq: 7,
-                offset: 2
+                offset: 2,
+                presets: ['work']
             },
             {
                 id: 'r2',
@@ -713,7 +840,8 @@
                 stopId: '',
                 isLiveApi: false,
                 freq: 8,
-                offset: 4
+                offset: 4,
+                presets: ['work', 'holiday']
             },
             {
                 id: 'r3',
@@ -724,7 +852,8 @@
                 stopId: '',
                 isLiveApi: false,
                 freq: 6,
-                offset: 1
+                offset: 1,
+                presets: ['work', 'mtr']
             },
             {
                 id: 'r4',
@@ -735,7 +864,56 @@
                 stopId: '',
                 isLiveApi: false,
                 freq: 15,
-                offset: 9
+                offset: 9,
+                presets: ['work']
+            },
+            {
+                id: 'r5',
+                operator: 'KMB',
+                route: '284',
+                dest: '沙田市中心 (循環線)',
+                stopName: '富豪花園 / 河畔花園',
+                stopId: '',
+                isLiveApi: false,
+                freq: 6,
+                offset: 3,
+                presets: ['mtr', 'holiday']
+            },
+            {
+                id: 'r6',
+                operator: 'CTB',
+                route: 'A41P',
+                dest: '機場 (地面運輸中心)',
+                stopName: '沙田第一城巴士總站',
+                stopId: '',
+                isLiveApi: false,
+                freq: 20,
+                offset: 11,
+                presets: ['holiday']
+            },
+            {
+                id: 'r7',
+                operator: 'KMB',
+                route: '182',
+                dest: '中環 (港澳碼頭)',
+                stopName: '愉翠苑 / 第一城中心',
+                stopId: '',
+                isLiveApi: false,
+                freq: 10,
+                offset: 5,
+                presets: ['work', 'holiday']
+            },
+            {
+                id: 'r8',
+                operator: 'GMB',
+                route: '65S',
+                dest: '黃泥頭 / 沙田站',
+                stopName: '屋苑商場專線小巴站',
+                stopId: '',
+                isLiveApi: false,
+                freq: 8,
+                offset: 0,
+                presets: ['mtr']
             }
         ];
 
@@ -767,11 +945,15 @@
             district: '香港天文台',
             checklist: DEFAULT_CHECKLIST,
             familyMemo: MEMO_PRESETS[0],
+            routePresets: DEFAULT_PRESETS,
+            activePresetId: 'ALL',
+            transportGridCols: 2, // 2 = 雙欄高密度並排 (啱晒 iPad 一次睇 8-10 條線), 1 = 單欄特大字
             routes: DEFAULT_ROUTES,
             transportFilter: 'ALL',
             walkBuffer: 4, // Minutes needed to take the lift + walk to bus stop
             autoNightMode: true,
             events: DEFAULT_EVENTS,
+            timetreeIcsUrl: '',
             selectedWeekDay: 'ALL',
             newEventTag: '重要',
             lastWeatherSummary: { temp: 26, desc: '大致天晴', warnings: [] },
@@ -798,6 +980,13 @@
                     const parsed = JSON.parse(raw);
                     state = { ...state, ...parsed };
                 }
+                if (!Array.isArray(state.routePresets) || state.routePresets.length === 0) {
+                    state.routePresets = JSON.parse(JSON.stringify(DEFAULT_PRESETS));
+                }
+                // Ensure each route has a presets array
+                state.routes.forEach(r => {
+                    if (!Array.isArray(r.presets)) r.presets = ['work'];
+                });
             } catch (e) {
                 console.warn('LocalStorage load fallback:', e);
             }
@@ -1118,6 +1307,80 @@
             showToast(`已設定連等𨋢步程為 ${state.walkBuffer} 分鐘`);
         }
 
+        function renderTransportPresetBar() {
+            const bar = document.getElementById('transport-preset-bar');
+            if (!bar) return;
+
+            const buttonsHtml = state.routePresets.map(p => {
+                const isActive = state.activePresetId === p.id;
+                const count = p.id === 'ALL'
+                    ? state.routes.length
+                    : state.routes.filter(r => Array.isArray(r.presets) && r.presets.includes(p.id)).length;
+
+                return `
+                    <button onclick="selectTransportPreset('${p.id}')"
+                        class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 shrink-0 ${
+                            isActive
+                                ? 'bg-sky-500 text-slate-950 shadow-sm'
+                                : 'surface-pill opacity-75 hover:opacity-100'
+                        }">
+                        <span>${p.name}</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono-num ${isActive ? 'bg-slate-950/20 text-slate-950' : 'bg-white/10 opacity-75'}">${count}</span>
+                    </button>
+                `;
+            }).join('');
+
+            const manageBtn = `
+                <button onclick="openRouteManagerModal()" title="新增或編輯路線組合"
+                    class="px-2.5 py-1.5 rounded-xl text-xs font-bold surface-pill opacity-60 hover:opacity-100 transition shrink-0 flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>自訂組合</span>
+                </button>
+            `;
+
+            bar.innerHTML = buttonsHtml + manageBtn;
+            lucide.createIcons();
+        }
+
+        function selectTransportPreset(presetId) {
+            state.activePresetId = presetId;
+            saveState();
+            renderTransportPresetBar();
+            refreshAllTransportETAs(false);
+        }
+
+        function toggleTransportGridCols() {
+            state.transportGridCols = state.transportGridCols === 1 ? 2 : 1;
+            applyTransportGridLayout();
+            saveState();
+            refreshAllTransportETAs(false);
+            showToast(state.transportGridCols === 2 ? '已切換為「雙欄並排」模式（同屏顯示更多路線）' : '已切換為「單欄大字」模式');
+        }
+
+        function applyTransportGridLayout() {
+            const container = document.getElementById('transport-eta-list');
+            const label = document.getElementById('eta-grid-toggle-text');
+            if (!container) return;
+            if (state.transportGridCols === 1) {
+                container.className = 'flex-1 overflow-y-auto pr-1 grid grid-cols-1 gap-2.5 content-start';
+                if (label) label.textContent = '單欄大字';
+            } else {
+                container.className = 'flex-1 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 content-start';
+                if (label) label.textContent = '雙欄多線';
+            }
+        }
+
+        function pinRouteToTop(routeId) {
+            const idx = state.routes.findIndex(r => r.id === routeId);
+            if (idx > 0) {
+                const [item] = state.routes.splice(idx, 1);
+                state.routes.unshift(item);
+                saveState();
+                refreshAllTransportETAs(false);
+                showToast(`已將 ${item.route} 置頂`);
+            }
+        }
+
         async function refreshAllTransportETAs(manual = false) {
             const icon = document.getElementById('eta-refresh-icon');
             if (icon) icon.classList.add('animate-spin');
@@ -1126,18 +1389,31 @@
             const walkLabel = document.getElementById('walk-buffer-label');
             if (walkLabel) walkLabel.textContent = walkBuf;
 
+            applyTransportGridLayout();
+            renderTransportPresetBar();
+
             const container = document.getElementById('transport-eta-list');
             const filteredRoutes = state.routes.filter(r => {
+                // Filter by active preset group first
+                if (state.activePresetId !== 'ALL') {
+                    if (!Array.isArray(r.presets) || !r.presets.includes(state.activePresetId)) {
+                        return false;
+                    }
+                }
+                // Then filter by transport vehicle type
                 if (state.transportFilter === 'ALL') return true;
                 const meta = OPERATOR_META[r.operator] || OPERATOR_META.KMB;
                 return meta.type === state.transportFilter;
             });
 
+            const countBadge = document.getElementById('eta-route-count-badge');
+            if (countBadge) countBadge.textContent = `${filteredRoutes.length} 條路線`;
+
             if (filteredRoutes.length === 0) {
                 container.innerHTML = `
-                    <div class="surface-pill rounded-2xl p-8 text-center space-y-2">
-                        <p class="text-sm font-bold opacity-75">尚未有此類別的路線</p>
-                        <button onclick="openRouteManagerModal()" class="text-xs text-sky-400 font-bold hover:underline">+ 點擊揀選你的巴士或小巴路線</button>
+                    <div class="col-span-full surface-pill rounded-2xl p-8 text-center space-y-2">
+                        <p class="text-sm font-bold opacity-75">此路線組合暫未加入路線</p>
+                        <button onclick="openRouteManagerModal()" class="text-xs text-sky-400 font-bold hover:underline">+ 點擊揀選路線或將現有路線編入此組合</button>
                     </div>
                 `;
                 if (icon) icon.classList.remove('animate-spin');
@@ -1157,52 +1433,53 @@
                 let leaveAdvice = '';
 
                 if (nextMin < walkBuf) {
-                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-500/20 text-slate-300 border border-slate-500/30">頭班趕唔切 · 建議睇下班 (${secondMin}分)</span>`;
+                    urgencyBadge = `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-500/20 text-slate-300 border border-slate-500/30">趕唔切 · 下班 ${secondMin}分</span>`;
                     mainTimeClass = 'opacity-45';
                     leaveAdvice = `趕唔切頭班，下班 ${secondMin} 分鐘到`;
                 } else if (nextMin <= walkBuf + 2) {
-                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse-slow">🔥 即刻出門撳𨋢！</span>`;
+                    urgencyBadge = `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse-slow">🔥 即刻出門！</span>`;
                     mainTimeClass = 'text-rose-400';
                     leaveAdvice = `仲有 ${nextMin} 分鐘到，即刻出門啱啱好`;
                 } else if (nextMin <= walkBuf + 5) {
                     const waitBeforeLeave = nextMin - walkBuf;
-                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">準備穿鞋 · ${waitBeforeLeave}分鐘後出門</span>`;
+                    urgencyBadge = `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">準備 · ${waitBeforeLeave}分後出門</span>`;
                     mainTimeClass = 'text-amber-400';
                     leaveAdvice = `仲有 ${nextMin} 分鐘到，${waitBeforeLeave} 分鐘後出門`;
                 } else {
                     const waitBeforeLeave = nextMin - walkBuf;
-                    urgencyBadge = `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">時間充裕 · ${waitBeforeLeave}分鐘後出門</span>`;
+                    urgencyBadge = `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">${waitBeforeLeave}分後出門</span>`;
                     mainTimeClass = 'text-emerald-400';
                     leaveAdvice = `仲有 ${nextMin} 分鐘到`;
                 }
 
                 summaryList.push({ route: r.route, dest: r.dest, nextMin, secondMin, leaveAdvice });
-                const subEtas = mins.slice(1).map(m => `${m}分`).join(' · ');
+                const subEtas = mins.slice(1).map(m => `${m}分`).join(' / ');
 
                 return `
-                    <div class="surface-pill rounded-2xl p-3.5 hover:border-sky-500/40 transition flex items-center justify-between gap-3">
+                    <div onclick="pinRouteToTop('${r.id}')" title="點擊將此路線置頂"
+                        class="surface-pill rounded-2xl p-3 hover:border-sky-500/40 transition flex items-center justify-between gap-2 cursor-pointer">
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${meta.badgeClass}">${meta.label}</span>
-                                <span class="font-mono-num text-xl sm:text-2xl font-extrabold tracking-tight">${r.route}</span>
-                                <span class="text-xs sm:text-sm font-bold truncate">往 ${r.dest}</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold border ${meta.badgeClass}">${meta.label}</span>
+                                <span class="font-mono-num text-lg sm:text-xl font-extrabold tracking-tight">${r.route}</span>
+                                <span class="text-xs font-bold truncate">往 ${r.dest}</span>
                             </div>
-                            <div class="flex items-center gap-2 mt-1.5 text-xs opacity-65">
+                            <div class="flex items-center gap-1.5 mt-1 text-[11px] opacity-65">
                                 <span class="truncate flex items-center gap-1">
                                     <i data-lucide="map-pin" class="w-3 h-3 shrink-0"></i>${r.stopName}
                                 </span>
-                                ${isLive ? '<span class="text-[10px] text-sky-400 font-bold shrink-0">● 實時GPS</span>' : ''}
+                                ${isLive ? '<span class="text-[10px] text-sky-400 font-bold shrink-0">●GPS</span>' : ''}
                             </div>
                         </div>
 
                         <div class="text-right shrink-0 flex flex-col items-end">
-                            <div class="flex items-baseline gap-1">
-                                <span class="font-mono-num text-3xl sm:text-4xl font-extrabold ${mainTimeClass}">${nextMin}</span>
-                                <span class="text-xs font-bold opacity-75">分鐘</span>
+                            <div class="flex items-baseline gap-0.5">
+                                <span class="font-mono-num text-2xl sm:text-3xl font-extrabold leading-none ${mainTimeClass}">${nextMin}</span>
+                                <span class="text-[11px] font-bold opacity-75">分</span>
                             </div>
-                            <div class="flex items-center gap-1.5 mt-1 flex-wrap justify-end">
+                            <div class="flex items-center gap-1 mt-1 flex-wrap justify-end">
                                 ${urgencyBadge}
-                                ${subEtas ? `<span class="font-mono-num text-[11px] opacity-60">隨後 ${subEtas}</span>` : ''}
+                                ${subEtas ? `<span class="font-mono-num text-[10px] opacity-60">${subEtas}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1441,6 +1718,8 @@
 
             if (!chosenDir || !chosenStop) return;
 
+            const defaultPresets = state.activePresetId !== 'ALL' ? [state.activePresetId] : ['work'];
+
             if (liveSearchContext.operator === 'KMB' || liveSearchContext.operator === 'CTB') {
                 state.routes.unshift({
                     id: 'r_' + Date.now(),
@@ -1452,7 +1731,8 @@
                     dir: chosenDir.code,
                     isLiveApi: true,
                     freq: 8,
-                    offset: 2
+                    offset: 2,
+                    presets: defaultPresets
                 });
             } else {
                 state.routes.unshift({
@@ -1466,7 +1746,8 @@
                     gmbStopSeq: chosenStop.stop_seq,
                     isLiveApi: true,
                     freq: 7,
-                    offset: 1
+                    offset: 1,
+                    presets: defaultPresets
                 });
             }
 
@@ -1488,6 +1769,8 @@
                 return;
             }
 
+            const defaultPresets = state.activePresetId !== 'ALL' ? [state.activePresetId] : ['work'];
+
             state.routes.unshift({
                 id: 'r_' + Date.now(),
                 operator: op,
@@ -1496,7 +1779,8 @@
                 stopName,
                 isLiveApi: false,
                 freq,
-                offset: Math.floor(Math.random() * freq)
+                offset: Math.floor(Math.random() * freq),
+                presets: defaultPresets
             });
 
             document.getElementById('custom-route').value = '';
@@ -1509,23 +1793,110 @@
             showToast(`已新增路線 ${route}`);
         }
 
+        function addNewRoutePreset() {
+            const input = document.getElementById('new-preset-name-input');
+            const name = input.value.trim();
+            if (!name) {
+                showToast('請先輸入新路線組合名稱');
+                return;
+            }
+            const newId = 'preset_' + Date.now();
+            state.routePresets.push({ id: newId, name });
+            input.value = '';
+            saveState();
+            renderSavedRoutesInModal();
+            renderTransportPresetBar();
+            showToast(`已新增「${name}」組合！請喺下方路線點選標籤加入`);
+        }
+
+        function deleteRoutePreset(presetId) {
+            if (presetId === 'ALL') return;
+            state.routePresets = state.routePresets.filter(p => p.id !== presetId);
+            if (state.activePresetId === presetId) state.activePresetId = 'ALL';
+            state.routes.forEach(r => {
+                if (Array.isArray(r.presets)) {
+                    r.presets = r.presets.filter(id => id !== presetId);
+                }
+            });
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(false);
+            showToast('已刪除路線組合');
+        }
+
+        function toggleRoutePresetMembership(routeId, presetId) {
+            const route = state.routes.find(r => r.id === routeId);
+            if (!route) return;
+            if (!Array.isArray(route.presets)) route.presets = [];
+            if (route.presets.includes(presetId)) {
+                route.presets = route.presets.filter(id => id !== presetId);
+            } else {
+                route.presets.push(presetId);
+            }
+            saveState();
+            renderSavedRoutesInModal();
+            refreshAllTransportETAs(false);
+        }
+
         function renderSavedRoutesInModal() {
+            // Render Preset Manager Pills
+            const presetsListEl = document.getElementById('modal-presets-list');
+            if (presetsListEl) {
+                presetsListEl.innerHTML = state.routePresets.map(p => {
+                    if (p.id === 'ALL') {
+                        return `<span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 opacity-75">全部路線 (預設固定)</span>`;
+                    }
+                    return `
+                        <div class="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
+                            <span>${p.name}</span>
+                            <button onclick="deleteRoutePreset('${p.id}')" class="hover:text-rose-400 transition" title="刪除此組合">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
             document.getElementById('saved-route-count').textContent = state.routes.length;
             const list = document.getElementById('modal-saved-routes-list');
+            const customPresets = state.routePresets.filter(p => p.id !== 'ALL');
+
             list.innerHTML = state.routes.map((r, index) => {
                 const meta = OPERATOR_META[r.operator] || OPERATOR_META.KMB;
+                const routePresets = Array.isArray(r.presets) ? r.presets : [];
+
+                const presetTogglesHtml = customPresets.map(p => {
+                    const active = routePresets.includes(p.id);
+                    return `
+                        <button onclick="toggleRoutePresetMembership('${r.id}', '${p.id}')"
+                            class="px-2 py-0.5 rounded-lg text-[11px] font-bold transition border ${
+                                active
+                                    ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
+                                    : 'bg-transparent border-white/15 opacity-50 hover:opacity-90'
+                            }">
+                            ${active ? '✓ ' : '+ '}${p.name}
+                        </button>
+                    `;
+                }).join('');
+
                 return `
-                    <div class="surface-pill rounded-2xl p-3 flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${meta.badgeClass}">${meta.label}</span>
-                            <span class="font-mono-num font-extrabold text-base">${r.route}</span>
-                            <span class="text-xs opacity-80 truncate">往 ${r.dest} · ${r.stopName}</span>
+                    <div class="surface-pill rounded-2xl p-3 flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${meta.badgeClass}">${meta.label}</span>
+                                <span class="font-mono-num font-extrabold text-base">${r.route}</span>
+                                <span class="text-xs opacity-80 truncate">往 ${r.dest} · ${r.stopName}</span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                ${index > 0 ? `<button onclick="moveRouteUp(${index})" class="p-1.5 rounded-lg hover:bg-white/10" title="上移"><i data-lucide="arrow-up" class="w-3.5 h-3.5"></i></button>` : ''}
+                                <button onclick="deleteRoute('${r.id}')" class="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20" title="刪除">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                            ${index > 0 ? `<button onclick="moveRouteUp(${index})" class="p-1.5 rounded-lg hover:bg-white/10" title="上移"><i data-lucide="arrow-up" class="w-3.5 h-3.5"></i></button>` : ''}
-                            <button onclick="deleteRoute('${r.id}')" class="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20" title="刪除">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
+                        <div class="flex items-center gap-1.5 flex-wrap pt-1 border-t border-current/10">
+                            <span class="text-[10px] opacity-55 mr-1">所屬組合:</span>
+                            ${presetTogglesHtml}
                         </div>
                     </div>
                 `;
@@ -1622,29 +1993,30 @@
                     '重要': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
                     '屋企': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
                     '繳費': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-                    '聚會': 'bg-sky-500/20 text-sky-400 border-sky-500/30'
+                    '聚會': 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+                    'TimeTree': 'bg-teal-500/20 text-teal-300 border-teal-500/40'
                 };
 
                 listEl.innerHTML = filtered.map(ev => {
                     const isToday = Number(ev.day) === todayDayNum;
                     const badgeStyle = tagColors[ev.tag] || tagColors['重要'];
                     return `
-                        <div class="surface-pill rounded-2xl p-3.5 flex items-start justify-between gap-3 transition ${ev.done ? 'opacity-45' : ''}">
+                        <div class="surface-pill rounded-2xl p-3 flex items-start justify-between gap-2.5 transition ${ev.done ? 'opacity-45' : ''}">
                             <button onclick="toggleWeeklyEventDone('${ev.id}')" class="mt-0.5 w-5 h-5 rounded-lg border border-current/30 flex items-center justify-center shrink-0 ${ev.done ? 'bg-emerald-500 border-emerald-500 text-slate-950' : ''}">
                                 ${ev.done ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
                             </button>
                             <div class="flex-1 min-w-0" onclick="toggleWeeklyEventDone('${ev.id}')">
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${badgeStyle}">${ev.tag}</span>
+                                    <span class="px-1.5 py-0.5 rounded-md text-[10px] font-extrabold border ${badgeStyle}">${ev.tag === 'TimeTree' ? '🌲 TimeTree' : ev.tag}</span>
                                     <span class="text-xs font-extrabold ${isToday ? 'text-sky-400' : 'opacity-70'}">
                                         ${isToday ? '● 今日 (' + DAY_NAMES_SHORT[ev.day] + ')' : DAY_NAMES_SHORT[ev.day]}
                                     </span>
                                     ${ev.time ? `<span class="font-mono-num text-xs opacity-65">${ev.time}</span>` : ''}
                                 </div>
-                                <p class="text-sm font-bold mt-1 leading-snug ${ev.done ? 'line-through' : ''}">${ev.title}</p>
+                                <p class="text-xs sm:text-sm font-bold mt-1 leading-snug ${ev.done ? 'line-through' : ''}">${ev.title}</p>
                             </div>
                             <button onclick="deleteWeeklyEvent('${ev.id}')" class="opacity-40 hover:opacity-100 hover:text-rose-400 p-1">
-                                <i data-lucide="x" class="w-4 h-4"></i>
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
                     `;
@@ -1817,11 +2189,249 @@
             document.getElementById('ipad-guide-modal').classList.remove('flex');
         }
 
+        function openTimeTreeModal() {
+            document.getElementById('timetree-ics-url-input').value = state.timetreeIcsUrl || '';
+            document.getElementById('timetree-modal').classList.remove('hidden');
+            document.getElementById('timetree-modal').classList.add('flex');
+        }
+
+        function closeTimeTreeModal() {
+            document.getElementById('timetree-modal').classList.add('hidden');
+            document.getElementById('timetree-modal').classList.remove('flex');
+        }
+
+        // Parse iCal (.ics) content and extract events for the current week
+        function parseIcsContentToWeeklyEvents(icsText) {
+            if (!icsText || !icsText.includes('BEGIN:VEVENT')) return 0;
+
+            // Unfold multi-line ICS properties
+            const unfolded = icsText.replace(/\r?\n[ \t]/g, '');
+            const eventBlocks = unfolded.split('BEGIN:VEVENT').slice(1);
+
+            const now = new Date();
+            // Calculate current week's Monday 00:00 and Sunday 23:59:59
+            const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+            const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() + diffToMon);
+            weekStart.setHours(0, 0, 0, 0);
+
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+
+            const newSyncedEvents = [];
+
+            for (const block of eventBlocks) {
+                const summaryMatch = block.match(/^SUMMARY(?:;[^:]*)?:(.*)$/m);
+                const dtStartMatch = block.match(/^DTSTART(?:;[^:]*)?:([0-9TZ]+)$/m);
+                if (!summaryMatch || !dtStartMatch) continue;
+
+                const title = summaryMatch[1].trim().replace(/\\,/g, ',').replace(/\\n/g, ' ');
+                const rawDt = dtStartMatch[1].trim();
+
+                let evDate = null;
+                let timeStr = '';
+
+                if (rawDt.length >= 8) {
+                    const y = Number(rawDt.slice(0, 4));
+                    const m = Number(rawDt.slice(4, 6)) - 1;
+                    const d = Number(rawDt.slice(6, 8));
+
+                    if (rawDt.includes('T') && rawDt.length >= 13) {
+                        const hh = Number(rawDt.slice(9, 11));
+                        const mm = Number(rawDt.slice(11, 13));
+                        if (rawDt.endsWith('Z')) {
+                            evDate = new Date(Date.UTC(y, m, d, hh, mm));
+                        } else {
+                            evDate = new Date(y, m, d, hh, mm);
+                        }
+                        timeStr = `${String(evDate.getHours()).padStart(2, '0')}:${String(evDate.getMinutes()).padStart(2, '0')}`;
+                    } else {
+                        evDate = new Date(y, m, d, 9, 0);
+                        timeStr = '全日';
+                    }
+                }
+
+                if (evDate && evDate >= weekStart && evDate <= weekEnd) {
+                    newSyncedEvents.push({
+                        id: 'tt_' + btoa(encodeURIComponent(title + '_' + evDate.getDay() + '_' + timeStr)).slice(0, 16),
+                        title,
+                        day: evDate.getDay(),
+                        time: timeStr,
+                        tag: 'TimeTree',
+                        done: false
+                    });
+                }
+            }
+
+            if (newSyncedEvents.length > 0) {
+                // Keep manual non-TimeTree events, replace old TimeTree synced events
+                const manualEvents = state.events.filter(e => e.tag !== 'TimeTree');
+                state.events = [...newSyncedEvents, ...manualEvents];
+                saveState();
+                renderWeeklySchedule();
+            }
+            return newSyncedEvents.length;
+        }
+
+        async function syncFromIcsUrl(manual = false) {
+            const inputEl = document.getElementById('timetree-ics-url-input');
+            let url = (inputEl ? inputEl.value.trim() : state.timetreeIcsUrl || '').trim();
+            if (!url) {
+                if (manual) showToast('請先貼上 .ics 日曆網址');
+                return;
+            }
+
+            // Convert webcal:// to https://
+            if (url.startsWith('webcal://')) {
+                url = 'https://' + url.slice('webcal://'.length);
+                if (inputEl) inputEl.value = url;
+            }
+
+            state.timetreeIcsUrl = url;
+            saveState();
+
+            const icon = document.getElementById('ics-sync-icon');
+            const feedback = document.getElementById('ics-sync-feedback');
+            if (icon) icon.classList.add('animate-spin');
+            if (feedback) feedback.textContent = '⏳ 正在連線讀取日曆資料...';
+
+            try {
+                let icsText = '';
+                // Try direct fetch or CORS proxy fallbacks so browser can read external .ics feeds
+                const endpoints = [
+                    url,
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                    `https://corsproxy.io/?${encodeURIComponent(url)}`
+                ];
+
+                for (const ep of endpoints) {
+                    try {
+                        const res = await fetch(ep);
+                        if (res.ok) {
+                            const txt = await res.text();
+                            if (txt.includes('BEGIN:VCALENDAR')) {
+                                icsText = txt;
+                                break;
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (!icsText) throw new Error('Cannot fetch ICS');
+
+                const count = parseIcsContentToWeeklyEvents(icsText);
+                if (feedback) {
+                    feedback.textContent = count > 0
+                        ? `✅ 同步成功！已載入本週 ${count} 項 TimeTree / 日曆行程。`
+                        : `✅ 日曆連線成功（本週暫無新行程，或行程不在本星期內）。`;
+                }
+                if (manual) showToast(`🌲 已同步 ${count} 項本週日曆行程`);
+            } catch (e) {
+                if (feedback) {
+                    feedback.textContent = '⚠️ 無法直接讀取此網址（可能未開啟公開權限），建議使用下方「匯入 .ics 檔案」或直接貼上文字。';
+                }
+                if (manual) showToast('未能讀取網址，請試用文字貼上或 .ics 檔案匯入');
+            } finally {
+                if (icon) setTimeout(() => icon.classList.remove('animate-spin'), 400);
+            }
+        }
+
+        function handleIcsFileUpload(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target?.result || '';
+                const count = parseIcsContentToWeeklyEvents(String(content));
+                showToast(count > 0 ? `🌲 成功從檔案匯入本週 ${count} 項行程！` : '檔案內未找到屬於本星期的行程');
+                if (count > 0) closeTimeTreeModal();
+            };
+            reader.readAsText(file);
+        }
+
+        function parsePastedTimeTreeText() {
+            const raw = document.getElementById('timetree-paste-input').value.trim();
+            if (!raw) {
+                showToast('請先貼上 TimeTree 行程文字');
+                return;
+            }
+
+            // If user pasted raw ICS content directly into the box
+            if (raw.includes('BEGIN:VEVENT')) {
+                const count = parseIcsContentToWeeklyEvents(raw);
+                showToast(`🌲 已識別並匯入 ${count} 項行程！`);
+                document.getElementById('timetree-paste-input').value = '';
+                closeTimeTreeModal();
+                return;
+            }
+
+            const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const dayMap = {
+                '日': 0, '天': 0, 'sun': 0,
+                '一': 1, 'mon': 1,
+                '二': 2, 'tue': 2,
+                '三': 3, 'wed': 3,
+                '四': 4, 'thu': 4,
+                '五': 5, 'fri': 5,
+                '六': 6, 'sat': 6
+            };
+
+            let added = 0;
+            const todayDay = new Date().getDay();
+
+            lines.forEach(line => {
+                let detectedDay = todayDay;
+                const dayMatch = line.match(/(?:星期|週|禮拜|周)([日天一二三四五六])/);
+                if (dayMatch && dayMap[dayMatch[1]] !== undefined) {
+                    detectedDay = dayMap[dayMatch[1]];
+                } else {
+                    const dateMatch = line.match(/(\d{1,2})\s*[月\/-]\s*(\d{1,2})/);
+                    if (dateMatch) {
+                        const m = Number(dateMatch[1]) - 1;
+                        const d = Number(dateMatch[2]);
+                        const dt = new Date(new Date().getFullYear(), m, d);
+                        if (!isNaN(dt.getTime())) detectedDay = dt.getDay();
+                    }
+                }
+
+                const timeMatch = line.match(/(\d{1,2}:\d{2})/);
+                const detectedTime = timeMatch ? timeMatch[1].padStart(5, '0') : '全日';
+
+                // Clean up date/time prefixes to get clean title
+                let cleanTitle = line
+                    .replace(/(?:星期|週|禮拜|周)[日天一二三四五六]/g, '')
+                    .replace(/\d{1,2}\s*[月\/-]\s*\d{1,2}\s*日?/g, '')
+                    .replace(/\(\s*\)|（\s*）/g, '')
+                    .replace(/\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?/g, '')
+                    .trim();
+
+                if (!cleanTitle) cleanTitle = line;
+
+                state.events.unshift({
+                    id: 'tt_txt_' + Date.now() + '_' + added,
+                    title: cleanTitle,
+                    day: detectedDay,
+                    time: detectedTime,
+                    tag: 'TimeTree',
+                    done: false
+                });
+                added++;
+            });
+
+            saveState();
+            renderWeeklySchedule();
+            document.getElementById('timetree-paste-input').value = '';
+            closeTimeTreeModal();
+            showToast(`🌲 已從文字加入 ${added} 項 TimeTree 行程！`);
+        }
+
         function downloadStandaloneHTML() {
             try {
                 // Clone current document and ensure modals are closed in the exported file
                 const clone = document.documentElement.cloneNode(true);
-                ['route-modal', 'event-modal', 'ipad-guide-modal', 'title-modal', 'night-standby-overlay'].forEach(id => {
+                ['route-modal', 'event-modal', 'ipad-guide-modal', 'title-modal', 'timetree-modal', 'night-standby-overlay'].forEach(id => {
                     const el = clone.querySelector('#' + id);
                     if (el) {
                         el.classList.add('hidden');
@@ -1950,11 +2560,15 @@
             setTransportFilter(state.transportFilter || 'ALL');
             renderWeeklySchedule();
             fetchWeatherData(false);
+            if (state.timetreeIcsUrl) {
+                syncFromIcsUrl(false);
+            }
 
             // Auto-refresh timers
             setInterval(updateClock, 1000);
             setInterval(() => refreshAllTransportETAs(false), 30000); // Update bus/minibus ETA every 30s
             setInterval(() => fetchWeatherData(false), 600000); // Update weather every 10 mins
+            setInterval(() => { if (state.timetreeIcsUrl) syncFromIcsUrl(false); }, 1800000); // Auto-sync TimeTree iCal every 30 mins
 
             lucide.createIcons();
         };

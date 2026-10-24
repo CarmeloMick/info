@@ -841,10 +841,10 @@
                 route: '89D',
                 dest: '藍田站',
                 stopName: '沙田第一城',
-                stopId: 'B32F5428A9175890', // Auto-verified on boot if needed
+                stopId: '', // Auto-verified by exact Chinese stopName on boot
                 dir: 'outbound',
                 serviceType: '1',
-                seq: 11,
+                seq: 21,
                 presets: ['WORK', 'HOLIDAY'],
                 pinned: true
             },
@@ -854,8 +854,8 @@
                 type: 'BUS',
                 route: '272K',
                 dest: '香港科學園',
-                stopName: '大學站 (馬料水公眾碼頭)',
-                stopId: '5975101F13D999F4',
+                stopName: '大學站',
+                stopId: '',
                 dir: 'outbound',
                 serviceType: '1',
                 seq: 1,
@@ -868,11 +868,11 @@
                 type: 'BUS',
                 route: '968',
                 dest: '銅鑼灣 (天后)',
-                stopName: '大欖隧道轉車站 (A3)',
-                stopId: '3A8001A5C299D05C',
+                stopName: '大欖隧道轉車站',
+                stopId: '',
                 dir: 'outbound',
                 serviceType: '1',
-                seq: 12,
+                seq: 11,
                 presets: ['WORK', 'HOLIDAY'],
                 pinned: false
             },
@@ -931,10 +931,14 @@
             githubToken: '',
             updatedAt: 0,
             lastWeatherSummary: { temp: 26, desc: '大致天晴', warnings: [], needUmbrella: false },
-            latestEtasMap: {} // route.id -> { etas: [{ mins, secs, timeStr, rmk, isRealtime }], source, updatedAt, error }
+            latestEtasMap: {} // route.id -> { etas: [{ mins, diffSec, targetMs, timeStr, rmk, isRealtime, opTag }], source, updatedAt, error }
         };
 
-        // Cache for KMB stop names if needed
+        // Official KMB Master Stop Dictionary Cache (stopId -> { name_tc, lat, long })
+        let kmbMasterStopMap = null;
+        let kmbMasterStopPromise = null;
+        let ctbRouteListSet = null; // Set of Citybus route numbers for joint-route detection
+
         let githubPushTimer = null;
         let isApplyingRemoteState = false;
         let currentSearchedStops = [];
@@ -946,10 +950,74 @@
         let cloudUser = null;
         let familyUnsubscribe = null;
         const cloudAppId = typeof __app_id !== 'undefined' ? __app_id : 'hk-entryway-smart-hub';
+        const LOCAL_STORAGE_KEY = 'hk_entryway_smart_hub_v3';
 
         // ============================================================================
-        // 1. REAL-TIME ACCURATE TRANSPORT ETA ENGINE (KMB / CTB / GMB)
+        // 1. REAL-TIME ACCURATE TRANSPORT ETA ENGINE (KMB / CTB / GMB + JOINT ROUTES)
         // ============================================================================
+
+        // Clean KMB stop names like "沙田第一城 (ST123)" -> "沙田第一城"
+        function cleanStopName(rawName) {
+            return String(rawName || '')
+                .replace(/\s*\([A-Z]{1,3}\d{1,4}\)\s*$/i, '')
+                .replace(/\s*-\s*[A-Z]\d+\s*$/i, '')
+                .trim();
+        }
+
+        // Load and cache KMB's full master stop dictionary in 1 request for instant stop verification
+        async function ensureKmbMasterStopMap() {
+            if (kmbMasterStopMap) return kmbMasterStopMap;
+            if (kmbMasterStopPromise) return kmbMasterStopPromise;
+
+            kmbMasterStopPromise = (async () => {
+                try {
+                    const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop');
+                    if (!res.ok) throw new Error('KMB stop list fetch failed');
+                    const json = await res.json();
+                    const map = {};
+                    for (const s of (json.data || [])) {
+                        map[s.stop] = {
+                            name_tc: cleanStopName(s.name_tc),
+                            raw_tc: s.name_tc || '',
+                            lat: parseFloat(s.lat),
+                            long: parseFloat(s.long)
+                        };
+                    }
+                    kmbMasterStopMap = map;
+                    return map;
+                } catch (e) {
+                    kmbMasterStopPromise = null;
+                    return {};
+                }
+            })();
+            return kmbMasterStopPromise;
+        }
+
+        // Load Citybus route set once to detect KMB+CTB jointly operated cross-harbour routes
+        async function ensureCtbRouteSet() {
+            if (ctbRouteListSet) return ctbRouteListSet;
+            try {
+                const res = await fetch('https://rt.data.gov.hk/v2/transport/citybus/route/CTB');
+                if (!res.ok) return new Set();
+                const json = await res.json();
+                ctbRouteListSet = new Set((json.data || []).map(r => String(r.route || '').toUpperCase()));
+                return ctbRouteListSet;
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        // Distance in meters between two GPS coordinates
+        function getDistanceMeters(lat1, lon1, lat2, lon2) {
+            if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
 
         // Format ISO timestamp to HH:MM (HKT)
         function formatEtaClockTime(isoString) {
@@ -964,68 +1032,120 @@
             }
         }
 
-        // Compute accurate minutes and seconds remaining from ISO timestamp
-        function computeAccurateEtaDiff(isoString) {
+        // Compute accurate minutes and seconds remaining, compensating for server/client clock drift
+        function computeAccurateEtaDiff(isoString, serverTimestampIso) {
             const targetMs = new Date(isoString).getTime();
             if (isNaN(targetMs)) return null;
-            const diffSec = Math.floor((targetMs - Date.now()) / 1000);
-            // Ignore buses that already departed more than 25 seconds ago
-            if (diffSec < -25) return null;
-            // Official KMB/Citybus logic: <= 45s shows 0 mins ("即將到站"), otherwise exact integer minutes
-            const mins = diffSec <= 45 ? 0 : Math.floor(diffSec / 60);
+
+            // If server provides data_timestamp and device clock is drifted by >10s, compensate
+            let clockOffsetMs = 0;
+            if (serverTimestampIso) {
+                const srvMs = new Date(serverTimestampIso).getTime();
+                if (!isNaN(srvMs) && Math.abs(srvMs - Date.now()) > 10000) {
+                    clockOffsetMs = srvMs - Date.now();
+                }
+            }
+
+            const effectiveNow = Date.now() + clockOffsetMs;
+            const diffSec = Math.floor((targetMs - effectiveNow) / 1000);
+
+            // Ignore buses that already departed more than 20 seconds ago
+            if (diffSec < -20) return null;
+
+            // Official KMB/Citybus logic: <= 30s shows 0 mins ("即將到站"), otherwise exact integer minutes
+            const mins = diffSec <= 30 ? 0 : Math.floor(diffSec / 60);
             return {
                 mins,
                 diffSec: Math.max(0, diffSec),
-                targetMs,
+                targetMs: Date.now() + Math.max(0, diffSec) * 1000, // Normalized to local clock for 1s live ticker
                 timeStr: formatEtaClockTime(isoString)
             };
         }
 
-        // Auto-resolve real KMB or GMB stopId if a default/legacy route has an invalid or missing stopId
-        async function autoResolveRouteStopIfNeeded(route) {
+        // Verify and self-heal a route's stopId & seq by matching its Chinese stopName against official APIs
+        async function autoResolveRouteStopIfNeeded(route, forceByName = false) {
             if (route.isCustomSchedule) return route;
 
-            // KMB Route Auto-Resolver
+            // 1. KMB Route Verification & Stop Name Matcher
             if (route.operator === 'KMB' && route.route) {
+                const stopMap = await ensureKmbMasterStopMap();
+                const routeCode = String(route.route).toUpperCase().trim();
                 const dirFull = (route.dir === 'I' || route.dir === 'inbound') ? 'inbound' : 'outbound';
                 const srv = route.serviceType || '1';
+
+                // Check if current stopId exists in KMB master stop map and matches route.stopName
+                const existingStopInfo = route.stopId ? stopMap[route.stopId] : null;
+                const wantedName = cleanStopName(route.stopName || '');
+                const stopNameMatches = existingStopInfo && wantedName && (
+                    existingStopInfo.name_tc === wantedName ||
+                    existingStopInfo.name_tc.includes(wantedName) ||
+                    wantedName.includes(existingStopInfo.name_tc)
+                );
+
+                if (existingStopInfo && stopNameMatches && !forceByName) {
+                    route.stopName = existingStopInfo.name_tc;
+                    return route;
+                }
+
+                // Fetch official stop list for this route & direction
                 try {
-                    // Check if current stopId actually returns stops for this route
-                    const stopsRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(route.route.toUpperCase())}/${dirFull}/${srv}`);
+                    const stopsRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(routeCode)}/${dirFull}/${srv}`);
                     if (!stopsRes.ok) return route;
                     const stopsJson = await stopsRes.json();
                     const stopsList = stopsJson.data || [];
                     if (stopsList.length === 0) return route;
 
-                    // Check if current stopId is already in this route's stop list
-                    const exactMatch = stopsList.find(s => s.stop === route.stopId);
-                    if (exactMatch) {
-                        route.seq = Number(exactMatch.seq);
-                        return route;
+                    // Update official destination name if missing
+                    try {
+                        const rRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route/${encodeURIComponent(routeCode)}/${dirFull}/${srv}`);
+                        if (rRes.ok) {
+                            const rJson = await rRes.json();
+                            if (rJson.data && rJson.data.dest_tc) route.dest = rJson.data.dest_tc;
+                        }
+                    } catch (e) {}
+
+                    // Priority A: If stopId is already in stopsList and we didn't have a conflicting stopName
+                    if (route.stopId && !forceByName) {
+                        const exactIdMatch = stopsList.find(s => s.stop === route.stopId);
+                        if (exactIdMatch && (!wantedName || (stopMap[exactIdMatch.stop]?.name_tc || '').includes(wantedName))) {
+                            route.seq = Number(exactIdMatch.seq);
+                            if (stopMap[exactIdMatch.stop]) route.stopName = stopMap[exactIdMatch.stop].name_tc;
+                            return route;
+                        }
                     }
 
-                    // Otherwise pick stop matching seq or middle of route, and fetch its real Chinese name
-                    const targetIdx = route.seq ? Math.min(stopsList.length - 1, Math.max(0, Number(route.seq) - 1)) : Math.min(4, stopsList.length - 1);
-                    const chosenStop = stopsList[targetIdx];
-                    if (chosenStop && chosenStop.stop) {
-                        route.stopId = chosenStop.stop;
-                        route.seq = Number(chosenStop.seq);
-                        try {
-                            const detailRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${chosenStop.stop}`);
-                            if (detailRes.ok) {
-                                const detailJson = await detailRes.json();
-                                if (detailJson.data && detailJson.data.name_tc) {
-                                    route.stopName = detailJson.data.name_tc.replace(/\s*\([A-Z0-9]+\)\s*$/, '');
-                                }
-                            }
-                        } catch (e) {}
+                    // Priority B: Match by Chinese stopName (exact match first, then substring match)
+                    let matchedStop = null;
+                    if (wantedName) {
+                        matchedStop = stopsList.find(s => (stopMap[s.stop]?.name_tc || '') === wantedName);
+                        if (!matchedStop) {
+                            matchedStop = stopsList.find(s => {
+                                const nm = stopMap[s.stop]?.name_tc || '';
+                                return nm && (nm.includes(wantedName) || wantedName.includes(nm));
+                            });
+                        }
+                    }
+
+                    // Priority C: Fallback to seq index
+                    if (!matchedStop) {
+                        const targetIdx = route.seq ? Math.min(stopsList.length - 1, Math.max(0, Number(route.seq) - 1)) : 0;
+                        matchedStop = stopsList[targetIdx];
+                    }
+
+                    if (matchedStop && matchedStop.stop) {
+                        route.stopId = matchedStop.stop;
+                        route.seq = Number(matchedStop.seq);
+                        if (stopMap[matchedStop.stop]?.name_tc) {
+                            route.stopName = stopMap[matchedStop.stop].name_tc;
+                        }
                     }
                 } catch (e) {}
             }
 
-            // GMB Route Auto-Resolver
+            // 2. GMB Route Auto-Resolver (Matches stopName accurately)
             if (route.operator === 'GMB' && route.route) {
                 const region = route.region || 'NT';
+                const wantedName = cleanStopName(route.stopName || '');
                 try {
                     if (!route.routeId) {
                         const rRes = await fetch(`https://data.etagmb.gov.hk/route/${region}/${encodeURIComponent(route.route.toUpperCase())}`);
@@ -1043,22 +1163,101 @@
                             }
                         }
                     }
-                    if (route.routeId && (!route.stopSeq || !route.stopId)) {
+                    if (route.routeId && (!route.stopSeq || !route.stopId || forceByName)) {
                         const sRes = await fetch(`https://data.etagmb.gov.hk/route-stop/${route.routeId}/${route.routeSeq || 1}`);
                         if (sRes.ok) {
                             const sJson = await sRes.json();
                             const stops = (sJson.data && sJson.data.route_stops) || [];
                             if (stops.length > 0) {
-                                const chosen = stops.find(s => s.stop_seq == route.stopSeq) || stops[Math.min(2, stops.length - 1)];
+                                let chosen = null;
+                                if (wantedName) {
+                                    chosen = stops.find(s => cleanStopName(s.name_tc) === wantedName) ||
+                                             stops.find(s => cleanStopName(s.name_tc).includes(wantedName) || wantedName.includes(cleanStopName(s.name_tc)));
+                                }
+                                if (!chosen) {
+                                    chosen = stops.find(s => s.stop_seq == route.stopSeq) || stops[0];
+                                }
                                 route.stopSeq = chosen.stop_seq;
                                 route.stopId = chosen.stop_id;
-                                route.stopName = chosen.name_tc || route.stopName;
+                                route.stopName = cleanStopName(chosen.name_tc) || route.stopName;
                             }
                         }
                     }
                 } catch (e) {}
             }
             return route;
+        }
+
+        // Helper: For KMB+CTB jointly operated cross-harbour routes, find co-located CTB stopId and fetch CTB ETAs
+        async function fetchJointCitybusEtasForKmbRoute(route) {
+            try {
+                const ctbSet = await ensureCtbRouteSet();
+                const targetRoute = String(route.route || '').toUpperCase().trim();
+                if (!ctbSet.has(targetRoute)) return [];
+
+                const stopMap = await ensureKmbMasterStopMap();
+                const kmbStopGeo = stopMap[route.stopId];
+                if (!kmbStopGeo || !kmbStopGeo.lat) return [];
+
+                const dirFull = (route.dir === 'I' || route.dir === 'inbound') ? 'inbound' : 'outbound';
+                const targetDirCode = dirFull === 'inbound' ? 'I' : 'O';
+
+                // Cache matched CTB stopId on the route object so we don't re-search every 15s
+                if (!route._jointCtbStopId) {
+                    const ctbStopsRes = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/${encodeURIComponent(targetRoute)}/${dirFull}`);
+                    if (!ctbStopsRes.ok) return [];
+                    const ctbStopsJson = await ctbStopsRes.json();
+                    const ctbStops = ctbStopsJson.data || [];
+                    if (ctbStops.length === 0) return [];
+
+                    // Check stops near the same sequence index first for speed
+                    const centerIdx = Math.min(ctbStops.length - 1, Math.max(0, (Number(route.seq) || 1) - 1));
+                    const candidateIndices = [];
+                    for (let offset = 0; offset < ctbStops.length; offset++) {
+                        if (centerIdx + offset < ctbStops.length) candidateIndices.push(centerIdx + offset);
+                        if (offset > 0 && centerIdx - offset >= 0) candidateIndices.push(centerIdx - offset);
+                    }
+
+                    for (const idx of candidateIndices.slice(0, 8)) {
+                        const cand = ctbStops[idx];
+                        const dRes = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/stop/${cand.stop}`);
+                        if (!dRes.ok) continue;
+                        const dJson = await dRes.json();
+                        const sData = dJson.data;
+                        if (sData && getDistanceMeters(kmbStopGeo.lat, kmbStopGeo.long, parseFloat(sData.lat), parseFloat(sData.long)) <= 220) {
+                            route._jointCtbStopId = cand.stop;
+                            break;
+                        }
+                    }
+                    if (!route._jointCtbStopId) route._jointCtbStopId = 'NONE';
+                }
+
+                if (!route._jointCtbStopId || route._jointCtbStopId === 'NONE') return [];
+
+                const etaRes = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${route._jointCtbStopId}/${encodeURIComponent(targetRoute)}`);
+                if (!etaRes.ok) return [];
+                const etaJson = await etaRes.json();
+                const rawList = (etaJson.data || []).filter(item => item.dir === targetDirCode && Boolean(item.eta));
+
+                const results = [];
+                for (const item of rawList) {
+                    const diff = computeAccurateEtaDiff(item.eta, etaJson.generated_timestamp);
+                    if (!diff) continue;
+                    const rmkTc = (item.rmk_tc || '').trim();
+                    results.push({
+                        mins: diff.mins,
+                        diffSec: diff.diffSec,
+                        targetMs: diff.targetMs,
+                        timeStr: diff.timeStr,
+                        rmk: rmkTc ? `城巴·${rmkTc}` : '城巴實時GPS',
+                        isRealtime: !rmkTc.includes('原定'),
+                        opTag: 'CTB'
+                    });
+                }
+                return results;
+            } catch (e) {
+                return [];
+            }
         }
 
         // Fetch Accurate Single Route ETA from Official Government APIs
@@ -1072,7 +1271,6 @@
                 const curSec = now.getSeconds();
                 const upcoming = [];
 
-                // Check current hour and next 2 hours
                 for (let hOffset = 0; hOffset <= 2; hOffset++) {
                     for (const schedMin of route.scheduleMins) {
                         const totalDiffSec = (hOffset * 60 + (schedMin - curMin)) * 60 - curSec;
@@ -1081,8 +1279,9 @@
                             upcoming.push({
                                 mins: Math.max(0, Math.floor(totalDiffSec / 60)),
                                 diffSec: Math.max(0, totalDiffSec),
+                                targetMs: arrivalDate.getTime(),
                                 timeStr: formatEtaClockTime(arrivalDate.toISOString()),
-                                rmk: '固定班次表',
+                                rmk: '固定時間表',
                                 isRealtime: false
                             });
                         }
@@ -1090,80 +1289,106 @@
                 }
                 return {
                     etas: upcoming.slice(0, 3),
-                    source: '固定班次',
+                    source: '固定班次表',
                     updatedAt: nowTs
                 };
             }
 
-            // Ensure route has valid stopId
-            if (!route.stopId && !route.routeId) {
-                await autoResolveRouteStopIfNeeded(route);
+            // Verify stopId against official stop database on first run
+            if (!route._verifiedStop) {
+                await autoResolveRouteStopIfNeeded(route, false);
+                route._verifiedStop = true;
             }
 
-            // 2. KMB / LWB Official Real-Time API
+            // 2. KMB / LWB Official Real-Time API (+ Joint Citybus Auto-Merge)
             if (route.operator === 'KMB' && route.stopId) {
                 const targetRoute = String(route.route || '').toUpperCase().trim();
                 const targetDir = (route.dir === 'I' || route.dir === 'inbound') ? 'I' : 'O';
 
-                // Primary: stop-eta returns ALL service_types (normal + special morning/evening trips)
-                const url = `https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(route.stopId)}?t=${nowTs}`;
-                const res = await fetch(url, { cache: 'no-store' });
+                // Query KMB stop-eta AND (if joint route) Citybus ETA in parallel
+                const [res, jointCtbEtas] = await Promise.all([
+                    fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(route.stopId)}`, { cache: 'no-store' }),
+                    fetchJointCitybusEtasForKmbRoute(route)
+                ]);
+
                 if (!res.ok) throw new Error(`KMB HTTP ${res.status}`);
                 const json = await res.json();
+                const serverTimeIso = json.generated_timestamp;
+
                 let list = (json.data || []).filter(item =>
                     String(item.route || '').toUpperCase() === targetRoute &&
                     item.dir === targetDir &&
                     Boolean(item.eta)
                 );
 
-                // If stopId was stale/wrong for this route, auto-resolve once and retry
+                // If empty, re-verify stop by Chinese name once in case stopId was from opposite direction
                 if (list.length === 0 && !route._resolvedOnce) {
                     route._resolvedOnce = true;
-                    await autoResolveRouteStopIfNeeded(route);
-                    const retryUrl = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${encodeURIComponent(route.stopId)}/${encodeURIComponent(targetRoute)}/${route.serviceType || '1'}?t=${Date.now()}`;
-                    const retryRes = await fetch(retryUrl, { cache: 'no-store' });
+                    await autoResolveRouteStopIfNeeded(route, true);
+                    const retryRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(route.stopId)}`, { cache: 'no-store' });
                     if (retryRes.ok) {
                         const retryJson = await retryRes.json();
-                        list = (retryJson.data || []).filter(item => item.dir === targetDir && Boolean(item.eta));
+                        list = (retryJson.data || []).filter(item =>
+                            String(item.route || '').toUpperCase() === targetRoute &&
+                            item.dir === targetDir &&
+                            Boolean(item.eta)
+                        );
                     }
                 }
 
-                // If circular route has multiple stop sequences at the same stop, match route.seq if available
-                if (route.seq && list.some(item => Number(item.seq) === Number(route.seq))) {
-                    list = list.filter(item => Number(item.seq) === Number(route.seq));
+                // Smart circular-route seq disambiguation:
+                // Only filter by seq if the SAME service_type has multiple distinct stop sequences at this stop (circular route passing same stop twice)
+                if (route.seq && list.length > 1) {
+                    const primarySrvList = list.filter(item => String(item.service_type || '1') === String(route.serviceType || '1'));
+                    const distinctSeqs = [...new Set(primarySrvList.map(item => Number(item.seq)))];
+                    if (distinctSeqs.length > 1) {
+                        const closestSeq = distinctSeqs.reduce((prev, curr) =>
+                            Math.abs(curr - Number(route.seq)) < Math.abs(prev - Number(route.seq)) ? curr : prev
+                        );
+                        list = list.filter(item =>
+                            String(item.service_type || '1') !== String(route.serviceType || '1') ||
+                            Number(item.seq) === closestSeq
+                        );
+                    }
                 }
 
-                // Update destination to official live destination if available
                 if (list[0] && list[0].dest_tc) {
                     route.dest = list[0].dest_tc;
                 }
 
-                // Calculate accurate remaining time & sort chronologically
                 const computed = [];
-                const seenTimestamps = new Set();
                 for (const item of list) {
-                    const diff = computeAccurateEtaDiff(item.eta);
+                    const diff = computeAccurateEtaDiff(item.eta, serverTimeIso);
                     if (!diff) continue;
-                    // Deduplicate identical departures within 25 seconds
-                    const bucketKey = Math.round(diff.targetMs / 25000);
-                    if (seenTimestamps.has(bucketKey)) continue;
-                    seenTimestamps.add(bucketKey);
-
                     const rmkTc = (item.rmk_tc || '').trim();
                     computed.push({
                         mins: diff.mins,
                         diffSec: diff.diffSec,
                         targetMs: diff.targetMs,
                         timeStr: diff.timeStr,
-                        rmk: rmkTc || '實時GPS',
-                        isRealtime: !rmkTc.includes('原定')
+                        rmk: rmkTc || '九巴實時GPS',
+                        isRealtime: !rmkTc.includes('原定'),
+                        opTag: 'KMB'
                     });
                 }
 
-                computed.sort((a, b) => a.targetMs - b.targetMs);
+                // Merge Joint Citybus ETAs if any
+                const allMerged = [...computed, ...jointCtbEtas].sort((a, b) => a.targetMs - b.targetMs);
+
+                // Deduplicate departures within 45 seconds of each other (prefer real-time GPS over scheduled)
+                const deduped = [];
+                for (const item of allMerged) {
+                    const duplicateIdx = deduped.findIndex(existing => Math.abs(existing.targetMs - item.targetMs) < 45000);
+                    if (duplicateIdx === -1) {
+                        deduped.push(item);
+                    } else if (!deduped[duplicateIdx].isRealtime && item.isRealtime) {
+                        deduped[duplicateIdx] = item;
+                    }
+                }
+
                 return {
-                    etas: computed.slice(0, 3),
-                    source: '九巴官方實時',
+                    etas: deduped.slice(0, 3),
+                    source: jointCtbEtas.length > 0 ? '九巴+城巴聯營實時' : '九巴官方實時',
                     updatedAt: nowTs
                 };
             }
@@ -1172,46 +1397,46 @@
             if (route.operator === 'CTB' && route.stopId) {
                 const targetRoute = String(route.route || '').toUpperCase().trim();
                 const targetDir = (route.dir === 'I' || route.dir === 'inbound') ? 'I' : 'O';
-                const url = `https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${encodeURIComponent(route.stopId)}/${encodeURIComponent(targetRoute)}?t=${nowTs}`;
+                const url = `https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${encodeURIComponent(route.stopId)}/${encodeURIComponent(targetRoute)}`;
                 const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`CTB HTTP ${res.status}`);
                 const json = await res.json();
+                const serverTimeIso = json.generated_timestamp;
 
                 let list = (json.data || []).filter(item => item.dir === targetDir && Boolean(item.eta));
                 if (list.length === 0) {
-                    // Fallback if direction flag in CTB was opposite
                     list = (json.data || []).filter(item => Boolean(item.eta));
-                }
-                if (route.seq && list.some(item => Number(item.seq) === Number(route.seq))) {
-                    list = list.filter(item => Number(item.seq) === Number(route.seq));
                 }
                 if (list[0] && list[0].dest_tc) {
                     route.dest = list[0].dest_tc;
                 }
 
                 const computed = [];
-                const seenTimestamps = new Set();
                 for (const item of list) {
-                    const diff = computeAccurateEtaDiff(item.eta);
+                    const diff = computeAccurateEtaDiff(item.eta, serverTimeIso);
                     if (!diff) continue;
-                    const bucketKey = Math.round(diff.targetMs / 25000);
-                    if (seenTimestamps.has(bucketKey)) continue;
-                    seenTimestamps.add(bucketKey);
-
                     const rmkTc = (item.rmk_tc || '').trim();
                     computed.push({
                         mins: diff.mins,
                         diffSec: diff.diffSec,
                         targetMs: diff.targetMs,
                         timeStr: diff.timeStr,
-                        rmk: rmkTc || '城巴實時',
-                        isRealtime: true
+                        rmk: rmkTc || '城巴實時GPS',
+                        isRealtime: !rmkTc.includes('原定'),
+                        opTag: 'CTB'
                     });
                 }
 
                 computed.sort((a, b) => a.targetMs - b.targetMs);
+                const deduped = [];
+                for (const item of computed) {
+                    if (!deduped.some(e => Math.abs(e.targetMs - item.targetMs) < 45000)) {
+                        deduped.push(item);
+                    }
+                }
+
                 return {
-                    etas: computed.slice(0, 3),
+                    etas: deduped.slice(0, 3),
                     source: '城巴官方實時',
                     updatedAt: nowTs
                 };
@@ -1220,14 +1445,14 @@
             // 4. Green Minibus (GMB) Official Transport Dept Real-Time API
             if (route.operator === 'GMB') {
                 if (!route.routeId || (!route.stopSeq && !route.stopId)) {
-                    await autoResolveRouteStopIfNeeded(route);
+                    await autoResolveRouteStopIfNeeded(route, true);
                 }
 
                 let url = '';
                 if (route.routeId && route.routeSeq && route.stopSeq) {
-                    url = `https://data.etagmb.gov.hk/eta/route-stop/${route.routeId}/${route.routeSeq}/${route.stopSeq}?t=${nowTs}`;
+                    url = `https://data.etagmb.gov.hk/eta/route-stop/${route.routeId}/${route.routeSeq}/${route.stopSeq}`;
                 } else if (route.routeId && route.stopId) {
-                    url = `https://data.etagmb.gov.hk/eta/route-stop/${route.routeId}/${route.stopId}?t=${nowTs}`;
+                    url = `https://data.etagmb.gov.hk/eta/route-stop/${route.routeId}/${route.stopId}`;
                 } else {
                     throw new Error('缺少專線小巴車站參數');
                 }
@@ -1235,8 +1460,8 @@
                 const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`GMB HTTP ${res.status}`);
                 const json = await res.json();
+                const serverTimeIso = json.generated_timestamp;
 
-                // Handle both Object and Array response structures from data.etagmb.gov.hk
                 let rawEtaArray = [];
                 if (Array.isArray(json.data)) {
                     const matchedDir = json.data.find(d => Number(d.route_seq) === Number(route.routeSeq || 1)) || json.data[0];
@@ -1248,15 +1473,16 @@
                 const computed = [];
                 for (const item of rawEtaArray) {
                     if (item.timestamp) {
-                        const diff = computeAccurateEtaDiff(item.timestamp);
+                        const diff = computeAccurateEtaDiff(item.timestamp, serverTimeIso);
                         if (!diff) continue;
                         computed.push({
                             mins: diff.mins,
                             diffSec: diff.diffSec,
                             targetMs: diff.targetMs,
                             timeStr: diff.timeStr,
-                            rmk: (item.remarks_tc || '').trim() || '實時GPS',
-                            isRealtime: true
+                            rmk: (item.remarks_tc || '').trim() || '小巴實時GPS',
+                            isRealtime: true,
+                            opTag: 'GMB'
                         });
                     } else if (typeof item.diff === 'number' && item.diff >= 0) {
                         const approxDate = new Date(Date.now() + item.diff * 60000);
@@ -1265,8 +1491,9 @@
                             diffSec: item.diff * 60,
                             targetMs: approxDate.getTime(),
                             timeStr: formatEtaClockTime(approxDate.toISOString()),
-                            rmk: (item.remarks_tc || '').trim() || '實時GPS',
-                            isRealtime: true
+                            rmk: (item.remarks_tc || '').trim() || '小巴實時GPS',
+                            isRealtime: true,
+                            opTag: 'GMB'
                         });
                     }
                 }
@@ -1280,6 +1507,80 @@
             }
 
             return { etas: [], source: '未綁定車站', updatedAt: nowTs, needsBind: true };
+        }
+
+        // Live 1-second local countdown updater so minutes & seconds tick smoothly between 15s API fetches
+        function tickLiveEtaCountdowns() {
+            const now = Date.now();
+            let hasChanges = false;
+            for (const routeId of Object.keys(state.latestEtasMap)) {
+                const entry = state.latestEtasMap[routeId];
+                if (!entry || !Array.isArray(entry.etas) || entry.etas.length === 0) continue;
+
+                entry.etas = entry.etas.filter(eta => {
+                    if (!eta.targetMs) return true;
+                    const diffSec = Math.floor((eta.targetMs - now) / 1000);
+                    if (diffSec < -15) {
+                        hasChanges = true;
+                        return false;
+                    }
+                    const newSec = Math.max(0, diffSec);
+                    const newMins = newSec <= 30 ? 0 : Math.floor(newSec / 60);
+                    if (newSec !== eta.diffSec || newMins !== eta.mins) {
+                        eta.diffSec = newSec;
+                        eta.mins = newMins;
+                        hasChanges = true;
+                    }
+                    return true;
+                });
+            }
+            if (hasChanges) {
+                renderTransportCards();
+            }
+        }
+
+        // Quick 1-Tap Flip Route Direction (Outbound <-> Inbound) directly from card
+        async function flipRouteDirection(routeId) {
+            const r = state.routes.find(x => x.id === routeId);
+            if (!r || r.isCustomSchedule) return;
+
+            showToast(`🔄 正在為 ${r.route} 切換相反行車方向...`);
+            if (r.operator === 'KMB' || r.operator === 'CTB') {
+                r.dir = (r.dir === 'I' || r.dir === 'inbound') ? 'outbound' : 'inbound';
+                r._verifiedStop = false;
+                r._resolvedOnce = false;
+                r._jointCtbStopId = null;
+
+                if (r.operator === 'KMB') {
+                    await autoResolveRouteStopIfNeeded(r, true);
+                } else if (r.operator === 'CTB') {
+                    try {
+                        const rRes = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route/CTB/${encodeURIComponent(r.route)}`);
+                        if (rRes.ok) {
+                            const rJson = await rRes.json();
+                            if (rJson.data) {
+                                r.dest = r.dir === 'inbound' ? rJson.data.orig_tc : rJson.data.dest_tc;
+                            }
+                        }
+                        await loadCtbRouteStops(r.route, r.dir, r.dest);
+                        const wanted = cleanStopName(r.stopName);
+                        const matched = currentSearchedStops.find(s => cleanStopName(s.stopName).includes(wanted) || wanted.includes(cleanStopName(s.stopName))) || currentSearchedStops[0];
+                        if (matched) {
+                            r.stopId = matched.stopId;
+                            r.seq = matched.seq;
+                            r.stopName = matched.stopName;
+                        }
+                    } catch (e) {}
+                }
+            } else if (r.operator === 'GMB') {
+                r.routeSeq = Number(r.routeSeq) === 1 ? 2 : 1;
+                r._verifiedStop = false;
+                await autoResolveRouteStopIfNeeded(r, true);
+            }
+
+            saveState();
+            await refreshAllTransportETAs(false);
+            showToast(`✅ 已切換 ${r.route} 為「往 ${r.dest} (${r.stopName})」`);
         }
 
         // Refresh all routes in parallel and render
@@ -1475,25 +1776,26 @@
                         adviceHtml = `
                             <div class="mt-2 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-300/90 flex items-center justify-between">
                                 <span>✅ 時間充裕 (連步程仲有 ${leaveIn} 分鐘出門)</span>
-                                <span class="opacity-75">${firstEta.rmk || '實時GPS'}</span>
+                                <span class="opacity-85">${firstEta.isRealtime ? '🛰️ ' : '🕒 '}${firstEta.rmk || '實時GPS'}</span>
                             </div>
                         `;
                     }
                 } else {
                     adviceHtml = `
-                        <div class="mt-2 px-2.5 py-1 rounded-xl bg-white/5 text-[11px] opacity-65 flex items-center justify-between">
-                            <span>暫無即將到站班次 (或已過尾班車)</span>
-                            <button onclick="openRebindStopModal('${route.id}')" class="text-sky-400 underline font-bold">校準車站</button>
+                        <div class="mt-2 px-2.5 py-1 rounded-xl bg-white/5 text-[11px] opacity-75 flex items-center justify-between">
+                            <span>暫無班次 · 如方向或分站唔啱請點擊校準 👉</span>
+                            <button onclick="openRebindStopModal('${route.id}')" class="text-sky-400 underline font-extrabold">揀返正車站</button>
                         </div>
                     `;
                 }
 
-                // Render 1st, 2nd, 3rd ETA slots with exact clock time
+                // Live minutes + seconds formatting
+                const remSecPart = firstEta ? String(firstEta.diffSec % 60).padStart(2, '0') : '00';
                 const firstDisplay = firstEta
                     ? (firstEta.mins === 0
-                        ? `<div class="text-right"><div class="text-xl sm:text-2xl font-black text-rose-400 animate-pulse">即將到站</div><div class="font-mono-num text-[11px] opacity-75">${firstEta.timeStr} (${firstEta.diffSec}秒)</div></div>`
-                        : `<div class="text-right"><div class="flex items-baseline justify-end gap-0.5"><span class="font-mono-num text-3xl sm:text-4xl font-black leading-none ${mainTimeColor}">${firstEta.mins}</span><span class="text-xs font-bold opacity-75">分</span></div><div class="font-mono-num text-[11px] font-bold opacity-75">${firstEta.timeStr} 到</div></div>`)
-                    : `<div class="text-right"><span class="text-sm font-bold opacity-45">--</span></div>`;
+                        ? `<div class="text-right shrink-0"><div class="text-xl sm:text-2xl font-black text-rose-400 animate-pulse">即將到站</div><div class="font-mono-num text-[11px] font-bold text-rose-300">${firstEta.timeStr} (${firstEta.diffSec}秒)</div></div>`
+                        : `<div class="text-right shrink-0"><div class="flex items-baseline justify-end gap-0.5"><span class="font-mono-num text-3xl sm:text-4xl font-black leading-none ${mainTimeColor}">${firstEta.mins}</span><span class="text-xs font-bold opacity-80">分</span><span class="font-mono-num text-xs font-bold opacity-55">${remSecPart}秒</span></div><div class="font-mono-num text-[11px] font-bold opacity-80">${firstEta.timeStr} 到站</div></div>`)
+                    : `<div class="text-right shrink-0"><span class="text-sm font-bold opacity-45">--</span></div>`;
 
                 const nextEtasHtml = [1, 2].map(idx => {
                     const item = etas[idx];
@@ -1501,10 +1803,11 @@
                     if (!item) {
                         return `<div class="surface-pill px-2.5 py-1 rounded-xl flex items-center justify-between text-[11px] opacity-45"><span>${label}</span><span class="font-mono-num">--</span></div>`;
                     }
+                    const opMini = item.opTag === 'CTB' && route.operator === 'KMB' ? '<span class="text-[9px] text-amber-300 mr-0.5">[城巴]</span>' : '';
                     return `
                         <div class="surface-pill px-2.5 py-1 rounded-xl flex items-center justify-between text-[11px]">
                             <span class="opacity-65 font-semibold">${label}</span>
-                            <span class="font-mono-num font-extrabold">${item.mins === 0 ? '即將' : item.mins + '分'} <span class="opacity-65 font-normal">(${item.timeStr})</span></span>
+                            <span class="font-mono-num font-extrabold">${opMini}${item.mins === 0 ? '即將' : item.mins + '分'} <span class="opacity-65 font-normal">(${item.timeStr})</span></span>
                         </div>
                     `;
                 }).join('');
@@ -1512,7 +1815,7 @@
                 return `
                     <div class="surface-pill rounded-2xl p-3.5 border ${cardBorderClass} flex flex-col justify-between transition hover:border-sky-500/40">
                         <div>
-                            <!-- Top Row: Route Badge, Dest, Stop & Pin/Rebind Actions -->
+                            <!-- Top Row: Route Badge, Dest, Clickable Stop & Live Countdown -->
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5 flex-wrap">
@@ -1520,10 +1823,11 @@
                                         <span class="font-mono-num text-xl sm:text-2xl font-black tracking-tight">${route.route}</span>
                                         <span class="text-xs sm:text-sm font-extrabold truncate">往 ${route.dest || '--'}</span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 text-xs opacity-75 mt-1 truncate">
-                                        <span>📍 ${route.stopName || '未設定車站'}</span>
-                                        ${route.seq ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-white/10 font-mono-num">第${route.seq}站</span>` : ''}
-                                    </div>
+                                    <button onclick="openRebindStopModal('${route.id}')" class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/5 hover:bg-sky-500/20 border border-white/10 hover:border-sky-400/40 text-xs font-bold transition max-w-full" title="點擊即時切換呢條路線嘅上車分站">
+                                        <span class="truncate">📍 ${route.stopName || '點擊揀車站'}</span>
+                                        ${route.seq ? `<span class="text-[10px] px-1 rounded bg-sky-500/20 text-sky-300 font-mono-num shrink-0">第${route.seq}站</span>` : ''}
+                                        <span class="text-[10px] text-sky-400 shrink-0">▾換站</span>
+                                    </button>
                                 </div>
                                 ${firstDisplay}
                             </div>
@@ -1534,17 +1838,22 @@
                             </div>
                         </div>
 
-                        <!-- Bottom Smart Walk Advice & Quick Stop Calibration -->
+                        <!-- Bottom Smart Walk Advice & Quick Stop/Direction Calibration -->
                         <div>
                             ${adviceHtml}
-                            <div class="flex items-center justify-between mt-2 pt-1.5 border-t border-current/5 text-[10px] opacity-60">
+                            <div class="flex items-center justify-between mt-2 pt-1.5 border-t border-current/5 text-[10px] opacity-70">
                                 <span>📡 ${etaData.source || '官方實時 API'}</span>
-                                <div class="flex items-center gap-2.5">
-                                    <button onclick="openRebindStopModal('${route.id}')" class="hover:opacity-100 hover:text-sky-400 font-bold transition" title="如果發現方向或車站唔啱，撳呢度直接重揀呢條線嘅車站">
-                                        📍 換車站/方向
+                                <div class="flex items-center gap-2">
+                                    ${!route.isCustomSchedule ? `
+                                    <button onclick="flipRouteDirection('${route.id}')" class="hover:opacity-100 hover:text-amber-400 font-extrabold transition" title="一鍵切換去程 / 回程方向">
+                                        ⇄ 轉方向
+                                    </button>
+                                    ` : ''}
+                                    <button onclick="openRebindStopModal('${route.id}')" class="hover:opacity-100 hover:text-sky-400 font-extrabold transition" title="揀選你屋企樓下嘅準確分站">
+                                        📍 校準分站
                                     </button>
                                     <button onclick="togglePinRoute('${route.id}')" class="hover:opacity-100 font-bold ${route.pinned ? 'text-amber-400 opacity-100' : ''}">
-                                        ${route.pinned ? '★ 已置頂' : '☆ 置頂'}
+                                        ${route.pinned ? '★ 置頂' : '☆ 置頂'}
                                     </button>
                                 </div>
                             </div>
@@ -1716,33 +2025,30 @@
             const stopsContainer = document.getElementById('stops-list-container');
             const grid = document.getElementById('stops-buttons-grid');
             stopsContainer.classList.remove('hidden');
-            grid.innerHTML = `<div class="col-span-full text-xs text-sky-400 py-3">⏳ 正在讀取九巴 ${routeNo} (往 ${destTc}) 沿途各站名稱...</div>`;
+            grid.innerHTML = `<div class="col-span-full text-xs text-sky-400 py-3">⏳ 正在秒速載入九巴 ${routeNo} (往 ${destTc}) 沿途各站...</div>`;
 
             try {
-                const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(routeNo)}/${dirFull}/${serviceType}`);
+                const [res, stopMap] = await Promise.all([
+                    fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(routeNo)}/${dirFull}/${serviceType}`),
+                    ensureKmbMasterStopMap()
+                ]);
                 const json = await res.json();
                 const stopRefs = json.data || [];
 
-                const detailedStops = await Promise.all(stopRefs.map(async (s) => {
-                    try {
-                        const dRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`);
-                        const dJson = await dRes.json();
-                        const rawName = (dJson.data && dJson.data.name_tc) || s.stop;
-                        return {
-                            seq: Number(s.seq),
-                            stopId: s.stop,
-                            stopName: rawName.replace(/\s*\([A-Z0-9]+\)\s*$/, ''),
-                            operator: 'KMB',
-                            type: 'BUS',
-                            route: routeNo,
-                            dest: destTc,
-                            dir: dirFull,
-                            serviceType
-                        };
-                    } catch (e) {
-                        return { seq: Number(s.seq), stopId: s.stop, stopName: s.stop, operator: 'KMB', type: 'BUS', route: routeNo, dest: destTc, dir: dirFull, serviceType };
-                    }
-                }));
+                const detailedStops = stopRefs.map((s) => {
+                    const cached = stopMap[s.stop];
+                    return {
+                        seq: Number(s.seq),
+                        stopId: s.stop,
+                        stopName: cached ? cached.name_tc : s.stop,
+                        operator: 'KMB',
+                        type: 'BUS',
+                        route: routeNo,
+                        dest: destTc,
+                        dir: dirFull,
+                        serviceType
+                    };
+                });
 
                 currentSearchedStops = detailedStops;
                 renderSearchedStopButtons(detailedStops);
@@ -2675,11 +2981,17 @@
         async function saveState() {
             if (isApplyingRemoteState) return;
             state.updatedAt = Date.now();
+            const payload = getSerializableState();
+
+            // Always persist to localStorage immediately so refreshing never loses calibrated stops
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+            } catch (e) {}
+
             scheduleGitHubAutoPush();
 
             if (!cloudDb || !cloudUser || !window.__CLOUD_ENGINE__) return;
             const { doc, setDoc } = window.__CLOUD_ENGINE__;
-            const payload = getSerializableState();
             try {
                 const privateRef = doc(cloudDb, 'artifacts', cloudAppId, 'users', cloudUser.uid, 'hub_config', 'main');
                 await setDoc(privateRef, payload, { merge: true });
@@ -2708,7 +3020,11 @@
                     const privateRef = doc(cloudDb, 'artifacts', cloudAppId, 'users', cloudUser.uid, 'hub_config', 'main');
                     const snap = await getDoc(privateRef);
                     if (snap.exists() && !state._loadedFromGitHubJson) {
-                        normalizeAndApplyState(snap.data());
+                        const cloudData = snap.data();
+                        // Only apply cloud data if it is newer than local state
+                        if (!state.updatedAt || (cloudData.updatedAt && cloudData.updatedAt > state.updatedAt)) {
+                            normalizeAndApplyState(cloudData);
+                        }
                     } else {
                         await setDoc(privateRef, getSerializableState(), { merge: true });
                     }
@@ -2898,6 +3214,18 @@
         // BOOTSTRAP ON WINDOW LOAD
         // ============================================================================
         window.onload = async function () {
+            // 0. Load local cached state first so user's calibrated stops are immediately restored
+            try {
+                const cachedRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (cachedRaw) {
+                    const cachedParsed = JSON.parse(cachedRaw);
+                    if (cachedParsed && typeof cachedParsed === 'object') {
+                        normalizeAndApplyState(cachedParsed);
+                        state.updatedAt = cachedParsed.updatedAt || Date.now();
+                    }
+                }
+            } catch (e) {}
+
             setTheme(state.theme || 'dark');
             document.getElementById('hub-title-text').textContent = state.hubTitle;
             document.getElementById('district-select').value = state.district;
@@ -2915,12 +3243,17 @@
                 state._loadedFromGitHubJson = true;
             }
 
-            // 2. Fetch real-time ETA and HKO Weather immediately
-            refreshAllTransportETAs(false);
+            // 2. Preload KMB Master Stop Dictionary & Verify all route stopIds against Chinese stopNames
+            await ensureKmbMasterStopMap();
+            await Promise.all(state.routes.map(r => autoResolveRouteStopIfNeeded(r, false)));
+            await refreshAllTransportETAs(false);
             fetchWeatherData();
 
-            // 3. High-frequency 15-second ETA sync (matching official KMB/Citybus apps)
-            setInterval(updateClock, 1000);
+            // 3. 1-Second Live Countdown Ticker + 15-Second Official GPS Refresh
+            setInterval(() => {
+                updateClock();
+                tickLiveEtaCountdowns();
+            }, 1000);
             setInterval(() => refreshAllTransportETAs(false), 15000);
             setInterval(fetchWeatherData, 600000);
 
